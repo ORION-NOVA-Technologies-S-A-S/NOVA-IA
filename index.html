@@ -973,6 +973,143 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: .88rem; min-width
   </div>
 </footer>
 
+<script>window.NOVA_CONFIG={"url": "https://hreaxtlivntifwmaacox.supabase.co", "key": "sb_publishable_vxgx-wGMO1I3tOS6lL_r2A_NOAQj8R0"};</script>
+<script>
+/* Nova IA — conexión con Supabase (PostgREST + Auth).
+   Ofrece a la página la misma interfaz que usaba antes (db.doc / db.collection / user),
+   pero guardando todo en la tabla public.docs de tu proyecto, protegida por RLS. */
+(function () {
+  var C = window.NOVA_CONFIG || {};
+  if (!C.url || !C.key) return;
+  var BASE = C.url.replace(/\/+$/, ''), KEY = C.key, LSK = 'nova.auth.v1', DOM = '@usuarios.novaia.app';
+  var sess = null, admin = null;
+  function lsGet() { try { return JSON.parse(localStorage.getItem(LSK) || 'null'); } catch (e) { return null; } }
+  function lsSet(v) { try { if (v) localStorage.setItem(LSK, JSON.stringify(v)); else localStorage.removeItem(LSK); } catch (e) { /* sin almacenamiento */ } }
+  sess = lsGet();
+  function fail(code, msg, status) { var e = new Error(msg || code); e.code = code; e.msg = msg; e.status = status; return e; }
+  function emailOf(u) { return String(u).toLowerCase() + DOM; }
+  function pack(j) { return { access_token: j.access_token, refresh_token: j.refresh_token, exp: Date.now() + (j.expires_in || 3600) * 1000, user: { id: j.user.id, username: (j.user.user_metadata && j.user.user_metadata.username) || String(j.user.email || '').split('@')[0] } }; }
+
+  var refreshing = null;
+  async function fresh() {
+    if (!sess) return null;
+    if (sess.exp - Date.now() > 60000) return sess.access_token;
+    if (!refreshing) refreshing = (async function () {
+      try {
+        var r = await fetch(BASE + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: sess.refresh_token }) });
+        if (!r.ok) { sess = null; lsSet(null); return null; }
+        sess = pack(await r.json()); lsSet(sess); return sess.access_token;
+      } catch (e) { return sess ? sess.access_token : null; } finally { refreshing = null; }
+    })();
+    return refreshing;
+  }
+  async function req(method, path, body, extra) {
+    var h = { apikey: KEY, 'Content-Type': 'application/json' }, t = await fresh();
+    if (t) h.Authorization = 'Bearer ' + t;
+    if (extra) for (var k in extra) h[k] = extra[k];
+    var r;
+    try { r = await fetch(BASE + path, { method: method, headers: h, body: body === undefined ? undefined : JSON.stringify(body) }); }
+    catch (e) { throw fail('unavailable', 'Sin conexión con el servidor.'); }
+    if (!r.ok) {
+      var j = null; try { j = await r.json(); } catch (e) { /* sin cuerpo */ }
+      throw fail(r.status === 429 ? 'resource_exhausted' : (r.status === 401 || r.status === 403 || (j && j.code === '42501')) ? 'invalid_argument' : 'error', j && (j.message || j.msg || j.error_description), r.status);
+    }
+    if (r.status === 204) return null;
+    var tx = await r.text(); return tx ? JSON.parse(tx) : null;
+  }
+
+  /* ---------- cuentas ---------- */
+  var Auth = {
+    user: function () { return sess ? sess.user : null; },
+    async signUp(username, pw) {
+      var r;
+      try { r = await fetch(BASE + '/auth/v1/signup', { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: emailOf(username), password: pw, data: { username: username } }) }); }
+      catch (e) { throw fail('unavailable', 'Sin conexión con el servidor.'); }
+      var j = await r.json().catch(function () { return {}; });
+      if (!r.ok) {
+        var m = String(j.msg || j.message || j.error_description || '');
+        if (/already|registered|exists/i.test(m) || j.error_code === 'user_already_exists') throw fail('exists', 'Ese usuario ya existe. Elige otro o ingresa.');
+        if (/weak|password/i.test(m)) throw fail('weak', 'La contraseña es muy débil para el servidor. Prueba una más larga.');
+        if (r.status === 429) throw fail('resource_exhausted', 'Demasiados intentos. Espera unos minutos.');
+        throw fail('error', 'No se pudo crear la cuenta. ' + m);
+      }
+      if (!j.access_token) throw fail('confirm', 'El servidor pide confirmar el correo. En Supabase desactiva Authentication > Providers > Email > Confirm email.');
+      sess = pack(j); lsSet(sess); admin = null; pokeAll(); return sess;
+    },
+    async signIn(username, pw) {
+      var r;
+      try { r = await fetch(BASE + '/auth/v1/token?grant_type=password', { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: emailOf(username), password: pw }) }); }
+      catch (e) { throw fail('unavailable', 'Sin conexión con el servidor.'); }
+      var j = await r.json().catch(function () { return {}; });
+      if (!r.ok) {
+        if (r.status === 429) throw fail('resource_exhausted', 'Demasiados intentos. Espera unos minutos.');
+        if (r.status === 400 || r.status === 401) throw fail('bad_credentials', 'Usuario o contraseña incorrectos.');
+        throw fail('error', 'No se pudo ingresar.');
+      }
+      sess = pack(j); lsSet(sess); admin = null; pokeAll(); return sess;
+    },
+    async signOut() {
+      var t = sess && sess.access_token; sess = null; admin = null; lsSet(null);
+      if (t) { try { await fetch(BASE + '/auth/v1/logout', { method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + t } }); } catch (e) { /* ya salió */ } }
+    }
+  };
+  window.NovaAuth = Auth;
+
+  /* ---------- documentos ---------- */
+  function q(v) { return encodeURIComponent(v); }
+  var watchers = [], timer = null;
+  function pokeAll() { setTimeout(tick, 250); }
+  function tick() { watchers.forEach(function (w) { w.run(); }); }
+  function schedule() { if (!timer) timer = setInterval(function () { if (!document.hidden) tick(); }, 6000); }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) tick(); });
+  function watch(fetcher, cb, errCb) {
+    var last = null, w = { run: async function () {
+      try { var v = await fetcher(), s = JSON.stringify(v); if (s !== last) { last = s; cb(v); } }
+      catch (e) { if (last === null && errCb) { last = ''; errCb(e); } }
+    } };
+    watchers.push(w); schedule(); w.run(); return function () { watchers = watchers.filter(function (x) { return x !== w; }); };
+  }
+  function snapOf(path, row) { return { exists: !!row, id: path.split('/').pop(), data: function () { return row ? JSON.parse(JSON.stringify(row.data)) : undefined; } }; }
+  function doc(path) {
+    var self = {
+      async get() { var r = await req('GET', '/rest/v1/docs?path=eq.' + q(path) + '&select=path,data'); return snapOf(path, r && r[0]); },
+      async set(d) { await req('POST', '/rest/v1/rpc/doc_set', { p_path: path, p_data: d }); pokeAll(); },
+      async update(d) { await req('POST', '/rest/v1/rpc/doc_merge', { p_path: path, p_patch: d }); pokeAll(); },
+      async delete() { await req('DELETE', '/rest/v1/docs?path=eq.' + q(path)); pokeAll(); },
+      onSnapshot(cb, errCb) { return watch(function () { return req('GET', '/rest/v1/docs?path=eq.' + q(path) + '&select=path,data').then(function (r) { return r && r[0] ? r[0] : null; }); }, function (row) { cb(snapOf(path, row)); }, errCb); }
+    };
+    return self;
+  }
+  function listSnap(rows) { return { docs: rows.map(function (r) { return { id: r.path.split('/').pop(), data: function () { return JSON.parse(JSON.stringify(r.data)); } }; }) }; }
+  function collection(name) {
+    var url = '/rest/v1/docs?coll=eq.' + q(name) + '&select=path,data&order=path.asc&limit=1000';
+    return {
+      async get() { return listSnap(await req('GET', url)); },
+      async add(d) { var id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); await doc(name + '/' + id).set(d); return { id: id }; },
+      onSnapshot(cb, errCb) { return watch(function () { return req('GET', url); }, function (rows) { cb(listSnap(rows)); }, errCb); }
+    };
+  }
+  var userApi = {
+    id: async function () { return sess ? sess.user.id : null; },
+    me: async function () { return { name: sess ? sess.user.username : '' }; },
+    canEdit: async function () {
+      if (!sess) return false;
+      if (admin === null) { try { admin = (await req('POST', '/rest/v1/rpc/is_admin', {})) === true; } catch (e) { admin = false; } }
+      return admin;
+    },
+    can: async function () { return true; },
+    profiles: async function (ids) {
+      var o = {}; if (!ids.length) return o;
+      var rows = await req('GET', '/rest/v1/docs?coll=eq.account&select=subject,data&subject=in.(' + ids.map(q).join(',') + ')');
+      (rows || []).forEach(function (r) { o[r.subject] = { name: r.data && r.data.username || '' }; });
+      return o;
+    }
+  };
+  var parts = { db: { doc: doc, collection: collection }, user: userApi, sample: null };
+  if (!window.claude) window.claude = { use: async function (n) { return parts[n]; } };
+})();
+
+</script>
 <script>
 (function () {
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -1305,10 +1442,33 @@ function audit(type, detail) {
   });
 }
 function acctRef() { return S.db.doc('data/users/' + S.me.id + '/account'); }
-function needDb(msgEl) {
-  if (!S.db || !S.me.id) { setMsg(msgEl, 'Para crear cuenta o ingresar abre esta página con tu cuenta de Claude. La base de datos no está disponible en esta vista.', 'err'); return false; }
-  if (S.me.canWrite === false) { setMsg(msgEl, 'Tu acceso a esta página es de solo lectura. Pide al dueño que te dé acceso de colaborador.', 'err'); return false; }
+function needDb(msgEl, anon) {
+  if (!S.db) { setMsg(msgEl, 'No hay conexión con el servidor de Nova. Revisa tu internet e intenta de nuevo.', 'err'); return false; }
+  if (!anon && !S.me.id) { setMsg(msgEl, 'Ingresa primero a tu cuenta.', 'err'); return false; }
   return true;
+}
+function authErr(e, fallback) { return e && e.msg ? e.msg : (e && e.code ? dbErr(e) : fallback); }
+async function bindUser(u) {
+  S.me.id = u.id; S.me.name = u.username || ''; S.me.canWrite = true;
+  try { S.me.canEdit = !!(await S.user.canEdit()); } catch (e) { S.me.canEdit = false; }
+  try { var g1 = await S.db.doc('registrations/' + u.id).get(); S.reg = g1.exists ? g1.data() : null; var g2 = await S.db.doc('requests/' + u.id).get(); S.req = g2.exists ? g2.data() : null; } catch (e) { /* se actualizará solo */ }
+  bindWatchers();
+}
+var boundUid = null;
+function bindWatchers() {
+  if (!S.db || !S.me.id || boundUid === S.me.id) return; boundUid = S.me.id;
+  try { S.db.doc('registrations/' + S.me.id).onSnapshot(function (s) { S.reg = s.exists ? s.data() : null; renderNav(); }, function () { }); } catch (e) { /* ok */ }
+  try { S.db.doc('requests/' + S.me.id).onSnapshot(function (s) { S.req = s.exists ? s.data() : null; if (S.view === 'auth') renderAuth(); }, function () { }); } catch (e) { /* ok */ }
+}
+function roleOf(a) { return S.me.canEdit ? 'admin' : (a && a.role === 'cliente' ? 'cliente' : 'usuario'); }
+async function restoreSession() {
+  try {
+    var snap = await acctRef().get();
+    if (!snap.exists) return;
+    var a = snap.data(); S.session = { role: roleOf(a), username: a.username || S.me.name }; touch();
+    try { var g1 = await S.db.doc('registrations/' + S.me.id).get(); S.reg = g1.exists ? g1.data() : null; } catch (e) { /* ok */ }
+    renderNav(); if (S.view === 'auth') go('auth');
+  } catch (e) { /* sin sesión */ }
 }
 
 async function onRegister(ev) {
@@ -1316,28 +1476,26 @@ async function onRegister(ev) {
   var msg = $('#regMsg'), btn = $('#regBtn');
   var role = ($('input[name=role]:checked') || {}).value || 'cliente';
   var u = $('#r-user').value.trim().toLowerCase(), p = $('#r-pass').value, p2 = $('#r-pass2').value;
-  if (!needDb(msg)) return;
+  if (!needDb(msg, true)) return;
   if (!/^[a-z0-9_.]{3,20}$/.test(u)) return setMsg(msg, 'El usuario debe tener 3 a 20 caracteres: letras, números, punto o guion bajo.', 'err');
   var pol = pwPolicy(p, u); if (!pol.ok) return setMsg(msg, pol.msg, 'err');
   if (p !== p2) return setMsg(msg, 'Las contraseñas no coinciden.', 'err');
   var ph = ($('#r-phone').value || '').replace(/[\s()-]/g, '').replace(/^\+?57/, ''), ch = ($('input[name=rch]:checked') || {}).value || 'whatsapp';
   if (!/^3\d{9}$/.test(ph)) return setMsg(msg, 'Escribe tu celular colombiano de 10 dígitos (empieza por 3).', 'err');
-  if (role === 'admin' && !S.me.canEdit) return setMsg(msg, 'Solo quien administra la página puede registrarse como administración.', 'err');
-  btn.disabled = true; setMsg(msg, 'Protegiendo tu cuenta…');
+  if (role === 'admin') role = 'usuario';
+  btn.disabled = true; setMsg(msg, 'Creando tu cuenta…');
   try {
-    var ref = acctRef(), snap = await ref.get();
-    if (snap.exists) { setMsg(msg, 'Ya tienes una cuenta. Ve a la pestaña Ingresar.', 'err'); return; }
-    var salt = crypto.getRandomValues(new Uint8Array(16));
-    var h = await hashPw(p, salt);
-    await ref.set({ phone: '+57' + ph, ch: ch, username: u, role: role, salt: b64(salt), hash: b64(h), iter: KDF_ITER, created: Date.now(), failed: 0, lockedUntil: 0 });
-    S.session = { role: role, username: u };
+    var au = await NovaAuth.signUp(u, p);
+    await bindUser(au.user);
+    await acctRef().set({ phone: '+57' + ph, ch: ch, username: u, role: role, created: Date.now() });
+    S.session = { role: roleOf({ role: role }), username: u };
     audit('registro', role); touch();
     $('#r-pass').value = ''; $('#r-pass2').value = ''; setMsg(msg, '');
     renderNav();
-    if (role === 'cliente') { toast('Cuenta de cliente creada.'); if (S.afterAuth) { go('dir'); resumeFlow(); } else go('dir'); }
-    else if (role === 'admin') { toast('Cuenta de administración creada.'); go('admin'); }
+    if (S.session.role === 'cliente') { toast('Cuenta de cliente creada.'); if (S.afterAuth) { go('dir'); resumeFlow(); } else go('dir'); }
+    else if (S.session.role === 'admin') { toast('Cuenta de administración creada.'); go('admin'); }
     else { S.wizard = 2; renderAuth(); toast('Cuenta creada. Ahora elige tu restaurante.'); }
-  } catch (e) { setMsg(msg, e && e.code ? dbErr(e) : 'Tu navegador no pudo proteger la contraseña.', 'err'); }
+  } catch (e) { setMsg(msg, authErr(e, 'No se pudo crear la cuenta.'), 'err'); }
   finally { btn.disabled = false; }
 }
 
@@ -1345,43 +1503,34 @@ async function onLogin(ev) {
   ev.preventDefault();
   var msg = $('#loginMsg'), btn = $('#loginBtn');
   var u = $('#l-user').value.trim().toLowerCase(), p = $('#l-pass').value;
-  if (!needDb(msg)) return;
+  if (!needDb(msg, true)) return;
   if (!u || !p) return setMsg(msg, 'Escribe tu usuario y tu contraseña.', 'err');
   btn.disabled = true; setMsg(msg, 'Verificando…');
-  var generic = 'Usuario o contraseña incorrectos.';
   try {
-    var ref = acctRef(), snap = await ref.get();
-    if (!snap.exists) { setMsg(msg, 'No encontramos una cuenta para tu perfil. Crea una en la pestaña Crear cuenta.', 'err'); return; }
-    var a = snap.data();
-    if (a.lockedUntil && a.lockedUntil > Date.now()) { setMsg(msg, 'Cuenta bloqueada por intentos fallidos. Intenta de nuevo en ' + Math.ceil((a.lockedUntil - Date.now()) / 60000) + ' min.', 'err'); return; }
-    var ok = a.username === u && eqBytes(await hashPw(p, unb64(a.salt)), unb64(a.hash));
-    if (!ok) {
-      var f = (a.failed || 0) + 1, upd = f >= MAX_FAIL ? { failed: 0, lockedUntil: Date.now() + LOCK_MS } : { failed: f };
-      try { await ref.update(upd); } catch (e) { /* sigue */ }
-      audit('ingreso-fallido', 'intento ' + f);
-      setMsg(msg, f >= MAX_FAIL ? 'Demasiados intentos. ORI SEGURITY bloqueó la cuenta 5 minutos.' : generic, 'err');
-      return;
-    }
-    if (a.failed || a.lockedUntil) { try { await ref.update({ failed: 0, lockedUntil: 0 }); } catch (e) { /* sigue */ } }
-    var role = a.role === 'cliente' ? 'cliente' : (a.role === 'admin' && S.me.canEdit ? 'admin' : 'usuario');
-    S.session = { role: role, username: a.username };
-    audit('ingreso', role); touch();
+    var au;
+    try { au = await NovaAuth.signIn(u, p); }
+    catch (e) { if (e && e.code === 'bad_credentials') { setMsg(msg, 'Usuario o contraseña incorrectos.', 'err'); return; } throw e; }
+    await bindUser(au.user);
+    var snap = await acctRef().get(), a = snap.exists ? snap.data() : null;
+    if (!a) { a = { username: u, role: 'cliente', created: Date.now() }; try { await acctRef().set(a); } catch (e) { /* sigue */ } }
+    S.session = { role: roleOf(a), username: a.username || u };
+    audit('ingreso', S.session.role); touch();
     $('#l-pass').value = ''; setMsg(msg, '');
     renderNav();
-    if (a.role === 'admin' && role !== 'admin') toast('La plataforma ya no te reconoce como editor. Entraste como usuario.');
+    var role = S.session.role;
     if (role === 'cliente') { if (S.afterAuth) { go('dir'); resumeFlow(); } else go('dir'); }
     else if (role === 'admin') go('admin');
     else if (S.afterAuth) { go('dir'); resumeFlow(); }
     else if (S.reg && S.map[S.reg.r]) go('rest', S.reg.r);
     else { S.authTab = 'reg'; S.wizard = 2; go('auth'); }
-  } catch (e) { setMsg(msg, e && e.code ? dbErr(e) : 'No se pudo verificar la contraseña.', 'err'); }
+  } catch (e) { setMsg(msg, authErr(e, 'No se pudo ingresar.'), 'err'); }
   finally { btn.disabled = false; }
 }
 
 function logout(why) {
   if (S.session) audit('salida', why ? 'inactividad' : 'manual');
   S.session = null; clearTimeout(idleT); S.wizard = 1; S.authTab = 'login';
-  renderNav(); go('home'); if (why) toast(why);
+  try { NovaAuth.signOut().then(function () { try { sessionStorage.setItem('nova.msg', why || ''); } catch (e) { /* ok */ } location.hash = ''; location.reload(); }); } catch (e) { location.reload(); }
 }
 
 /* ============ navegación ============ */
@@ -1561,10 +1710,10 @@ function renderAuth() {
   var st = $('#regSteps'); st.textContent = '';
   ['Cuenta', 'Tipo', 'Restaurante'].forEach(function (n, i) { var s = el(i + 1 === step ? 'b' : 'span', '', (i + 1) + ' ' + n); st.appendChild(s); });
   var adminOk = !!S.me.canEdit, ra = $('#roleAdmin'); ra.disabled = !adminOk; if (!adminOk && ra.checked) $('input[name=role][value=cliente]').checked = true;
-  var rh = $('#roleHint'); rh.hidden = adminOk; rh.textContent = 'Administración se activa solo para quien tiene permisos de editor sobre esta página.';
+  var rh = $('#roleHint'); rh.hidden = adminOk; rh.textContent = 'La cuenta de administración la asigna Nova directamente.';
   if (step === 2) typeChips($('#regTypes'), S.regType, function (i) { S.regType = i; S.wizard = 3; $('#regQ').value = ''; renderAuth(); }, false);
   if (step === 3) renderRegList();
-  if (!S.db) setMsg($('#regMsg'), 'Abre esta página con tu cuenta de Claude para guardar cuentas y registros.', 'err');
+  if (!S.db) setMsg($('#regMsg'), 'No hay conexión con el servidor de Nova.', 'err');
 }
 function renderRegList() {
   var list = $('#regList'); list.textContent = '';
@@ -1573,17 +1722,17 @@ function renderRegList() {
   res.slice(0, 60).forEach(function (r) { list.appendChild(cardEl(r, chooseRest, S.reg && S.reg.r === r.id)); });
   if (!res.length) list.appendChild(el('div', 'empty', 'No hay coincidencias. Si tu restaurante no aparece, usa el botón de abajo.'));
   var m = $('#regMsg');
-  if (S.req && S.req.status) setMsg(m, 'Tu solicitud de nuevo restaurante está ' + S.req.status + '.');
+  if (S.req && S.req.status) setMsg(m, S.req.claim ? 'Tu solicitud para «' + S.req.n + '» está ' + S.req.status + '.' : 'Tu solicitud de nuevo restaurante está ' + S.req.status + '.');
 }
 $('#regQ').addEventListener('input', renderRegList);
 async function chooseRest(r) {
   var msg = $('#regMsg'); if (!needDb(msg)) return;
   try {
-    await S.db.doc('registrations/' + S.me.id).set({ r: r.id, t: r.t, ts: Date.now() });
-    audit('registro-restaurante', r.id);
-    toast('Listo. Este es el perfil de tu restaurante.');
-    S.wizard = 1; S.authTab = 'login';
-    S.reg = { r: r.id, t: r.t }; renderNav(); go('rest', r.id);
+    var rq = { n: clip(r.n, 80), t: r.t, a: clip(r.a || '', 120), p: '', w: '', claim: r.id, status: 'pendiente', ts: Date.now() };
+    await S.db.doc('requests/' + S.me.id).set(rq);
+    audit('solicitud-restaurante', r.id);
+    S.req = rq; setMsg(msg, 'Solicitud enviada. Administración confirmará que eres de «' + r.n + '» y entonces verás sus pedidos.', 'ok');
+    toast('Solicitud enviada a administración.');
   } catch (e) { setMsg(msg, dbErr(e), 'err'); }
 }
 $('#regBack').addEventListener('click', function () { S.wizard = 2; renderAuth(); });
@@ -1769,6 +1918,11 @@ $('#adminPane').addEventListener('click', async function (e) {
     else if (t.getAttribute('data-approve')) {
       var uid = t.getAttribute('data-approve'), rq = (S.adm.reqs.filter(function (x) { return x.id === uid; })[0] || {}).d;
       if (!rq) return;
+      if (rq.claim) {
+        await S.db.doc('registrations/' + uid).set({ r: String(rq.claim), t: rq.t, ts: Date.now() });
+        await S.db.doc('requests/' + uid).update({ status: 'aprobado', r: String(rq.claim) });
+        audit('admin-aprueba', String(rq.claim)); toast('Persona asignada al restaurante.'); await loadAdmin(); renderAdmin(); return;
+      }
       var id = slug(rq.n) + '-' + rand4();
       await S.db.doc('extra/' + id).set({ n: clip(rq.n, 80), t: typeof rq.t === 'number' ? rq.t : T.length - 1, a: clip(rq.a, 120), p: clip(rq.p, 20), w: safeUrl(rq.w), ts: Date.now() });
       await S.db.doc('registrations/' + uid).set({ r: id, t: rq.t, ts: Date.now() });
@@ -1919,7 +2073,7 @@ function renderOrders() {
   var box = $('#ordList'); if (!box) return;
   var list = myOrders(), role = S.session && S.session.role;
   $('#ordTitle').textContent = role === 'admin' ? 'Todos los pedidos' : (S.reg ? 'Pedidos y mis compras' : 'Mis pedidos');
-  $('#ordLede').textContent = S.db ? 'Estado en vivo. Los pagos por PSE son de prueba.' : 'Abre la página con tu cuenta de Claude para ver tus pedidos.';
+  $('#ordLede').textContent = S.db ? 'Estado en vivo. Los pagos por PSE son de prueba.' : 'No hay conexión con el servidor.';
   box.innerHTML = list.length ? list.map(function (o) { return orderHTML(o, isOwnerOf(o)); }).join('') : '<div class="empty">Todavía no tienes pedidos. Pídele a Nova algo de comer o un hotel.</div>';
 }
 document.addEventListener('click', async function (e) {
@@ -2073,39 +2227,8 @@ document.addEventListener('click', function (e) { var p = e.target.closest('[dat
 var RESET = null;
 function maskPhone(p) { p = String(p || ''); return p.length >= 6 ? p.slice(0, 3) + ' ••• •• ' + p.slice(-2) : '••••'; }
 function forgotModal() {
-  openModal('<h3 id="modalTitle">Recuperar contraseña</h3><div id="fgStep1"><p class="hint">Escribe tu usuario. Te enviaremos un código al celular que registraste, por el canal que elegiste al crear la cuenta.</p>' +
-    '<label for="fg-u">Usuario<input id="fg-u" maxlength="20" autocapitalize="none" spellcheck="false" autocomplete="username"></label>' +
-    '<div class="rowbtns"><button class="btn primary" type="button" id="fg-send">Enviar código</button><button class="btn ghost" type="button" data-close>Cancelar</button></div></div>' +
-    '<div id="fgStep2" hidden><div class="paynote" id="fgSim"></div><label for="fg-c">Código de 6 dígitos<input id="fg-c" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></label>' +
-    '<label for="fg-p">Contraseña nueva<input id="fg-p" type="password" maxlength="64" autocomplete="new-password"></label>' +
-    '<div class="rowbtns"><button class="btn primary" type="button" id="fg-ok">Cambiar contraseña</button><button class="btn ghost" type="button" data-close>Cancelar</button></div></div><p class="msg" id="fgMsg" role="status"></p>', function (m) {
-    $$('[data-close]', m).forEach(function (b) { b.addEventListener('click', function () { RESET = null; closeModal(); }); });
-    var msg = $('#fgMsg', m);
-    $('#fg-send', m).addEventListener('click', async function () {
-      var u = $('#fg-u', m).value.trim().toLowerCase(); if (!needDb(msg)) return;
-      if (!u) return setMsg(msg, 'Escribe tu usuario.', 'err');
-      if (RESET && RESET.at && Date.now() - RESET.at < 30000) return setMsg(msg, 'Espera unos segundos antes de pedir otro código.', 'err');
-      try {
-        var s = await acctRef().get(), a = s.exists ? s.data() : null;
-        if (!a || a.username !== u || !a.phone) { setMsg(msg, 'Si el usuario existe y tiene celular registrado, enviamos un código.', 'ok'); RESET = { at: Date.now() }; return; }
-        var buf = crypto.getRandomValues(new Uint32Array(1)), code = String(buf[0] % 1000000).padStart(6, '0');
-        RESET = { at: Date.now(), user: u, code: code, exp: Date.now() + 600000, tries: 0 };
-        var canal = a.ch === 'sms' ? 'SMS' : 'WhatsApp';
-        $('#fgSim', m).innerHTML = '<b>Demostración.</b> Nova aún no tiene ' + canal + ' conectado, por eso el mensaje se muestra aquí. En producción el código llega solo al celular y nunca aparece en pantalla.<div class="mmail" style="margin-top:8px">' + canal + ' a ' + esc(maskPhone(a.phone)) + '\nNova: tu código para recuperar la contraseña es ' + esc(code) + '. Vence en 10 minutos. Si no lo pediste, ignóralo.</div>';
-        $('#fgStep1', m).hidden = true; $('#fgStep2', m).hidden = false; setMsg(msg, ''); $('#fg-c', m).focus(); audit('recuperacion-solicitada', canal);
-      } catch (e) { setMsg(msg, dbErr(e), 'err'); }
-    });
-    $('#fg-ok', m).addEventListener('click', async function () {
-      var code = $('#fg-c', m).value.trim(), np = $('#fg-p', m).value, bad = 'Código incorrecto o vencido.';
-      if (!RESET || !RESET.code || RESET.exp < Date.now() || RESET.tries >= 5) return setMsg(msg, bad, 'err');
-      if (code !== RESET.code) { RESET.tries++; return setMsg(msg, bad, 'err'); }
-      var pol = pwPolicy(np, RESET.user); if (!pol.ok) return setMsg(msg, pol.msg, 'err');
-      try {
-        var salt = crypto.getRandomValues(new Uint8Array(16)), h = await hashPw(np, salt);
-        await acctRef().update({ salt: b64(salt), hash: b64(h), iter: KDF_ITER, failed: 0, lockedUntil: 0 });
-        audit('recuperacion-completada', ''); RESET = null; closeModal(); toast('Contraseña actualizada. Ya puedes ingresar.');
-      } catch (e) { setMsg(msg, e && e.code ? dbErr(e) : 'No se pudo cambiar la contraseña.', 'err'); }
-    });
+  openModal('<h3 id="modalTitle">Recuperar contraseña</h3><p class="hint">El envío del código por WhatsApp o SMS al celular que registraste se activa cuando Nova tenga conectado su proveedor de mensajes. Mientras tanto, escribe a administración de Nova y ellos restablecen tu acceso.</p><div class="rowbtns"><button class="btn ghost" type="button" data-close>Cerrar</button></div>', function (m) {
+    m.querySelector('[data-close]').addEventListener('click', closeModal);
   });
 }
 document.addEventListener('click', function (e) { if (e.target.closest('[data-forgot]')) { e.preventDefault(); forgotModal(); } });
@@ -2588,11 +2711,9 @@ async function init() {
   if (S.db) {
     var watch = function (path, set) { try { S.db.collection(path).onSnapshot(function (snap) { var o = {}; snap.docs.forEach(function (d) { o[d.id] = d.data(); }); set(o); refresh(); }, function () { }); } catch (e) { /* ok */ } };
     watch('overrides', function (o) { S.ov = o; }); watch('extra', function (o) { S.extra = o; }); watch('kb', function (o) { S.kb = o; }); watch('menus', function (o) { S.menus = o; }); startOrderWatchers();
-    if (S.me.id) {
-      try { S.db.doc('registrations/' + S.me.id).onSnapshot(function (s) { S.reg = s.exists ? s.data() : null; renderNav(); }, function () { }); } catch (e) { /* ok */ }
-      try { S.db.doc('requests/' + S.me.id).onSnapshot(function (s) { S.req = s.exists ? s.data() : null; if (S.view === 'auth') renderAuth(); }, function () { }); } catch (e) { /* ok */ }
-    }
+    if (S.me.id) { bindWatchers(); await restoreSession(); }
   }
+  try { var pm = sessionStorage.getItem('nova.msg'); if (pm) { sessionStorage.removeItem('nova.msg'); toast(pm); } } catch (e) { /* ok */ }
   renderNav(); renderSecStatus(); if (S.view === 'auth') renderAuth();
 }
 init();

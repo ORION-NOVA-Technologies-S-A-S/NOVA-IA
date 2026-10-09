@@ -1,0 +1,138 @@
+<!-- ===== Vistas de la plataforma ===== -->
+<main id="v-dir" class="view" data-view="dir" hidden>
+  <div class="wrap">
+    <div class="page-head">
+      <p class="eyebrow">Neiva, Huila</p>
+      <h1>Restaurantes de Neiva</h1>
+      <p class="lede" id="dirLede"></p>
+    </div>
+    <div class="toolbar">
+      <input id="dirQ" type="search" placeholder="Buscar por nombre o dirección" maxlength="60" autocomplete="off" aria-label="Buscar restaurante">
+    </div>
+    <div class="chips" id="dirTypes" role="group" aria-label="Tipo de restaurante"></div>
+    <div class="rgrid" id="dirGrid"></div>
+    <div class="more"><button class="btn ghost" id="dirMore" type="button">Mostrar más</button></div>
+    <p class="fine" id="dirSrc" style="margin-bottom:56px">Fuentes: directorio de encolombia.com y listado de Tripadvisor para Neiva (consultados el 8 de octubre de 2026). El tipo se asigna según el nombre y la cocina publicada; los datos pueden estar desactualizados.</p>
+  </div>
+</main>
+
+<main id="v-rest" class="view" data-view="rest" hidden>
+  <div class="wrap">
+    <div class="page-head" style="padding-bottom:16px">
+      <div class="rowbtns"><button class="btn ghost small" type="button" id="restBack">← Restaurantes</button></div>
+    </div>
+    <div id="restBody"></div>
+  </div>
+</main>
+
+<main id="v-auth" class="view" data-view="auth" hidden>
+  <div class="wrap narrow">
+    <div class="authcard">
+      <div class="seg" role="tablist" aria-label="Acceso">
+        <button type="button" role="tab" id="atab-login" aria-selected="true" data-atab="login">Ingresar</button>
+        <button type="button" role="tab" id="atab-reg" aria-selected="false" data-atab="reg">Crear cuenta</button>
+      </div>
+
+      <form id="loginForm" novalidate autocomplete="on">
+        <label for="l-user">Usuario
+          <input id="l-user" name="username" autocomplete="username" maxlength="20" autocapitalize="none" spellcheck="false" required>
+        </label>
+        <label for="l-pass">Contraseña
+          <span class="pwrow"><input id="l-pass" name="password" type="password" autocomplete="current-password" maxlength="64" required><button type="button" data-showpw="l-pass">Ver</button></span>
+        </label>
+        <button class="btn primary" type="submit" id="loginBtn">Ingresar</button>
+        <p class="msg" id="loginMsg" role="status"></p>
+      </form>
+
+      <div id="regWizard" hidden>
+        <div class="steps2" id="regSteps"></div>
+
+        <form id="regForm" novalidate autocomplete="on">
+          <fieldset class="roles">
+            <legend>¿Cómo vas a usar Nova?</legend>
+            <label><input type="radio" name="role" value="usuario" checked><span>Usuario<small>Registro mi restaurante en Nova</small></span></label>
+            <label><input type="radio" name="role" value="admin" id="roleAdmin"><span>Administración<small>Gestiono la plataforma</small></span></label>
+          </fieldset>
+          <p class="hint" id="roleHint" hidden></p>
+          <label for="r-user">Usuario
+            <input id="r-user" name="username" autocomplete="username" maxlength="20" autocapitalize="none" spellcheck="false" required>
+            <span class="hint">3 a 20 caracteres: letras, números, punto o guion bajo.</span>
+          </label>
+          <label for="r-pass">Contraseña
+            <span class="pwrow"><input id="r-pass" name="password" type="password" autocomplete="new-password" maxlength="64" required><button type="button" data-showpw="r-pass">Ver</button></span>
+          </label>
+          <div class="meter2" aria-hidden="true"><i id="pwBar"></i></div>
+          <p class="hint" id="pwHint">Mínimo 10 caracteres, con tres de estos: minúscula, mayúscula, número, símbolo.</p>
+          <label for="r-pass2">Repetir contraseña
+            <input id="r-pass2" name="password2" type="password" autocomplete="new-password" maxlength="64" required>
+          </label>
+          <button class="btn primary" type="submit" id="regBtn">Continuar</button>
+        </form>
+
+        <div id="regStep2" hidden>
+          <h3 style="margin-bottom:6px">¿Qué tipo de restaurante vas a registrar?</h3>
+          <p class="hint" style="margin-bottom:12px">Elige el tipo y te mostramos los restaurantes de Neiva de esa categoría.</p>
+          <div class="chips" id="regTypes" role="group" aria-label="Tipo de restaurante"></div>
+        </div>
+
+        <div id="regStep3" hidden>
+          <h3 style="margin-bottom:6px" id="regStep3Title">Elige tu restaurante</h3>
+          <div class="toolbar" style="margin-top:10px"><input id="regQ" type="search" placeholder="Buscar en esta categoría" maxlength="60" autocomplete="off" aria-label="Buscar restaurante en la categoría"></div>
+          <div class="rgrid" id="regList" style="grid-template-columns:1fr;margin-top:0"></div>
+          <div class="rowbtns" style="margin-top:14px">
+            <button class="btn ghost small" type="button" id="regBack">← Cambiar tipo</button>
+            <button class="btn ghost small" type="button" id="regNew">Mi restaurante no aparece</button>
+          </div>
+        </div>
+
+        <p class="msg" id="regMsg" role="status"></p>
+      </div>
+
+      <p class="shieldline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Protegido por ORI SEGURITY</p>
+    </div>
+  </div>
+</main>
+
+<main id="v-admin" class="view" data-view="admin" hidden>
+  <div class="wrap">
+    <div class="page-head">
+      <p class="eyebrow">Administración</p>
+      <h1>Panel de Nova</h1>
+      <p class="lede">Gestiona los restaurantes de Neiva, los registros, el conocimiento de NOVA FLOW IA y revisa ORI SEGURITY.</p>
+    </div>
+    <div class="atabs" role="tablist" id="atabs">
+      <button type="button" role="tab" data-ptab="resumen" aria-selected="true">Resumen</button>
+      <button type="button" role="tab" data-ptab="rest" aria-selected="false">Restaurantes</button>
+      <button type="button" role="tab" data-ptab="regs" aria-selected="false">Registros</button>
+      <button type="button" role="tab" data-ptab="solic" aria-selected="false">Solicitudes</button>
+      <button type="button" role="tab" data-ptab="kb" aria-selected="false">Conocimiento de Nova</button>
+      <button type="button" role="tab" data-ptab="seg" aria-selected="false">ORI SEGURITY</button>
+    </div>
+    <div class="pane" id="adminPane" style="margin-bottom:56px"></div>
+  </div>
+</main>
+
+<!-- Modal genérico -->
+<div class="overlay" id="overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" id="modal"></div>
+</div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<!-- NOVA FLOW IA -->
+<button class="fab" id="fab" type="button" aria-label="Abrir NOVA FLOW IA" aria-expanded="false">
+  <span class="face"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="5" y="6" width="30" height="28" rx="13" fill="#10142b" stroke="#5db0ff" stroke-opacity=".6"/><ellipse cx="14" cy="19" rx="3.6" ry="2.6" fill="#8fd0ff"/><ellipse cx="26" cy="19" rx="3.6" ry="2.6" fill="#8fd0ff"/><path d="M15 26q5 3 10 0" stroke="#5db0ff" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></span>
+  <span class="lbl">NOVA FLOW IA</span>
+</button>
+<section class="cpanel" id="cpanel" hidden aria-label="NOVA FLOW IA" style="padding:0;border-top:0">
+  <div class="chead">
+    <span class="face"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="5" y="6" width="30" height="28" rx="13" fill="#10142b" stroke="#5db0ff" stroke-opacity=".6"/><ellipse cx="14" cy="19" rx="3.6" ry="2.6" fill="#8fd0ff"/><ellipse cx="26" cy="19" rx="3.6" ry="2.6" fill="#8fd0ff"/><path d="M15 26q5 3 10 0" stroke="#5db0ff" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></span>
+    <div><b>NOVA FLOW IA</b><small id="chatSub">Asistente de restaurantes de Neiva</small></div>
+    <button type="button" id="chatClose" aria-label="Cerrar asistente">×</button>
+  </div>
+  <div class="cmsgs" id="cmsgs" aria-live="polite"></div>
+  <div class="csug" id="csug"></div>
+  <form class="cform" id="cform" autocomplete="off">
+    <input id="cin" type="text" maxlength="200" placeholder="Pregúntale a Nova" aria-label="Mensaje para NOVA FLOW IA">
+    <button type="submit">Enviar</button>
+  </form>
+</section>

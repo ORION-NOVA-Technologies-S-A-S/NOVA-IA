@@ -1,0 +1,93 @@
+/* ===== V3: avatar animado, pedidos, pagos ===== */
+.av { width: 100%; height: 100%; display: block; overflow: visible; --ex: 0; --ey: 0; }
+.av-all { animation: avfloat 4.5s ease-in-out infinite; transform-box: view-box; }
+@keyframes avfloat { 50% { transform: translateY(-2.5px); } }
+.av-head { transform-box: view-box; transform-origin: 60px 72px; animation: avsway 7s ease-in-out infinite; }
+@keyframes avsway { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(2.5deg); } 70% { transform: rotate(-2.5deg); } }
+.av-eyes { animation: blink 5s infinite; transform-box: fill-box; transform-origin: center; }
+.av-pup { transform: translate(calc(var(--ex) * 3px), calc(var(--ey) * 2px)); transition: transform .12s linear; }
+.av-open { opacity: 0; transform-box: fill-box; transform-origin: center; }
+.av.talk .av-smile { opacity: 0; }
+.av.talk .av-open { opacity: 1; animation: avmouth .26s ease-in-out infinite alternate; }
+@keyframes avmouth { from { transform: scaleY(.35); } to { transform: scaleY(1.3); } }
+.av-cheek { opacity: 0; transition: opacity .2s; }
+.av.happy .av-cheek { opacity: .8; }
+.av.happy .av-all { animation: avhop .45s ease-out 2; }
+@keyframes avhop { 40% { transform: translateY(-7px); } }
+.av.think .av-head { animation: avtilt 1s ease-in-out infinite alternate; }
+@keyframes avtilt { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
+.av-ant { animation: avant 2s ease-in-out infinite; }
+.av.think .av-ant { animation-duration: .5s; }
+@keyframes avant { 50% { opacity: .35; } }
+.av-arm-r { transform-box: view-box; transform-origin: 99px 84px; }
+.av.wave .av-arm-r { animation: avwave .55s ease-in-out 5 alternate; }
+@keyframes avwave { from { transform: rotate(-120deg); } to { transform: rotate(-165deg); } }
+.chead .face { width: 64px; height: 64px; border-radius: 20px; overflow: hidden; background: #05060f; padding: 2px; }
+.chead .face svg.av { width: 100%; height: 100%; }
+.fab .face { width: 48px; height: 48px; border-radius: 16px; overflow: hidden; padding: 2px; }
+.fab .face svg.av { width: 100%; height: 100%; }
+.fab { padding: 6px 18px 6px 6px; }
+.fab.nudge { animation: fabnudge 1.2s ease-in-out 3; }
+@keyframes fabnudge { 50% { transform: translateY(-6px); } }
+/* hero interactivo */
+#heroStage { cursor: pointer; outline-offset: 6px; --ex: 0; --ey: 0; }
+.hero-eyes { transform: translate(calc(var(--ex) * 5px), calc(var(--ey) * 3px)); transition: transform .12s linear; }
+.hero-arm { transform-origin: 62px 160px; }
+#heroStage.wave .hero-arm { animation: herowave .5s ease-in-out 5 alternate; }
+@keyframes herowave { from { transform: rotate(0); } to { transform: rotate(150deg); } }
+.hero-say { position: absolute; top: 4%; left: 50%; transform: translateX(-50%); z-index: 3; max-width: 82%; background: var(--surface-2); border: 1px solid rgba(120, 160, 255, .5); padding: 9px 14px; border-radius: 16px; font-size: .86rem; text-align: center; box-shadow: 0 10px 30px -10px rgba(60, 100, 255, .7); }
+.hero-say[hidden] { display: none; }
+.hero-hint { position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%); z-index: 3; font-size: .74rem; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; pointer-events: none; }
+/* tarjetas dentro del chat */
+.mcard { align-self: stretch; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px; display: grid; gap: 10px; font-size: .88rem; }
+.mcard h4 { margin: 0; font-size: .86rem; letter-spacing: .02em; }
+.mcard h5 { margin: 4px 0 0; font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+.mcard.done { opacity: .6; }
+.mcard.done button, .mcard.done input, .mcard.done select, .mcard.done textarea { pointer-events: none; }
+.mrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.mrow b { font-weight: 600; overflow-wrap: anywhere; }
+.mrow small { grid-column: 1; color: var(--muted); font-size: .76rem; }
+.mrow .pr { color: var(--blue); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.step { display: inline-flex; align-items: center; gap: 4px; grid-row: 1 / span 2; grid-column: 2; }
+.mrow:has(.step) .pr { display: none; }
+.mrow .sub { display: flex; justify-content: space-between; gap: 8px; }
+.step button { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); font: inherit; cursor: pointer; padding: 0; line-height: 1; }
+.step output { min-width: 20px; text-align: center; font-variant-numeric: tabular-nums; }
+.mtot { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-top: 1px solid var(--line); padding-top: 10px; font-weight: 600; }
+.mcard .btn, .mcard button.go { font: inherit; font-size: .84rem; font-weight: 600; border-radius: 999px; padding: 9px 16px; border: 0; cursor: pointer; background: linear-gradient(135deg, var(--blue), var(--indigo)); color: #fff; }
+.mcard button.alt { background: var(--surface-2); color: var(--fg); border: 1px solid var(--line); }
+.mcard button:disabled { opacity: .5; cursor: not-allowed; }
+.mcard label { display: grid; gap: 4px; font-size: .78rem; color: var(--muted); }
+.mcard input, .mcard select, .mcard textarea { font: inherit; font-size: .88rem; color: var(--fg); background: var(--bg, #05060f); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; width: 100%; min-width: 0; }
+.mcard textarea { min-height: 50px; resize: vertical; }
+.mcard .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mcard .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.mcard .opts button { font: inherit; font-size: .82rem; border-radius: 999px; padding: 7px 13px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); cursor: pointer; }
+.mcard .opts button[aria-pressed="true"] { border-color: var(--blue); box-shadow: inset 0 0 0 1px var(--blue); }
+.mcard .err { color: var(--bad); font-size: .8rem; min-height: 1em; }
+.mcard .ok { color: var(--ok); }
+.mmail { white-space: pre-wrap; background: var(--surface-2); border: 1px dashed var(--line); border-radius: 10px; padding: 10px; font-size: .78rem; overflow-wrap: anywhere; }
+.acts a, .mcard a.go { text-decoration: none; display: inline-block; }
+.roles { grid-template-columns: 1fr; }
+@media (min-width: 560px) { .roles { grid-template-columns: repeat(3, 1fr); } }
+/* pagos */
+.paybox { display: grid; gap: 12px; }
+.paynote { padding: 10px 12px; border-radius: 12px; background: rgba(255, 190, 70, .1); border: 1px solid rgba(255, 190, 70, .45); font-size: .82rem; }
+.paysum { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); font-size: .86rem; }
+.paysum div { display: flex; justify-content: space-between; gap: 10px; }
+.paysum .big { font-size: 1.1rem; font-weight: 700; }
+/* lista de pedidos */
+.ordlist { display: grid; gap: 14px; margin-bottom: 56px; }
+.ocard { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 10px; }
+.ocard header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: baseline; border: 0; position: static; background: none; backdrop-filter: none; padding: 0; }
+.ocard ul { margin: 0; padding-left: 18px; font-size: .88rem; }
+.ocard .tot { display: grid; gap: 2px; font-size: .86rem; font-variant-numeric: tabular-nums; }
+.ocard .tot div { display: flex; justify-content: space-between; gap: 10px; max-width: 360px; }
+.st { display: inline-block; font-size: .74rem; padding: 3px 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
+.st.nuevo { color: var(--warn); } .st.entregado, .st.finalizada { color: var(--ok); } .st.cancelado { color: var(--bad); }
+.ocard .rowbtns button { font: inherit; font-size: .8rem; border-radius: 999px; padding: 7px 14px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); cursor: pointer; }
+.ocard .rowbtns button.good { background: linear-gradient(135deg, var(--blue), var(--indigo)); border: 0; color: #fff; }
+.ocard .rowbtns button.bad { color: var(--bad); }
+.tag.sim { color: var(--warn); }
+.cform { gap: 8px; }
+@media (prefers-reduced-motion: reduce) { .av *, .av, #heroStage * { animation: none !important; } }

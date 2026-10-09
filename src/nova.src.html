@@ -1,0 +1,627 @@
+<title>Nova Humanoide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Concepto: sitio oscuro de una sola identidad (Orion Nova): negro espacial, azul a índigo, plata.
+   Hero con el humanoide, secciones por sector y una app móvil funcional en un marco de teléfono. */
+:root {
+  --bg: #04050b;
+  --surface: #0a0d1c;
+  --surface-2: #10142b;
+  --line: rgba(140, 170, 255, .16);
+  --fg: #eef2ff;
+  --muted: #9aa4c7;
+  --blue: #5db0ff;
+  --indigo: #3a3fe0;
+  --silver: #d6dbe8;
+  --ok: #4be3a1;
+  --warn: #ffc75a;
+  --font-display: "Chakra Petch", "Eurostile", "Bahnschrift", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  padding-inline: 16px;
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { animation: none !important; transition: none !important; } }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 6px; }
+.wrap { max-width: 1120px; margin-inline: auto; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.08; text-wrap: balance; margin: 0; letter-spacing: .01em; }
+h1 { font-size: clamp(2.2rem, 6.2vw, 4.2rem); font-weight: 700; }
+h2 { font-size: clamp(1.7rem, 4vw, 2.6rem); font-weight: 600; }
+h3 { font-size: 1.25rem; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font-family: var(--font-display); font-size: .78rem; letter-spacing: .28em; text-transform: uppercase; color: var(--blue); font-weight: 600; }
+.lede { color: var(--muted); font-size: 1.1rem; max-width: 56ch; }
+
+/* Header */
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; margin-inline: -16px; padding: 10px 16px; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+header.top .wrap { display: flex; align-items: center; gap: 16px; justify-content: space-between; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; min-width: 0; }
+.brand img { width: 44px; height: 36px; object-fit: cover; border-radius: 6px; }
+.brand b { font-family: var(--font-display); letter-spacing: .22em; font-size: 1.15rem; }
+.brand small { display: block; color: var(--muted); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; line-height: 1.1; }
+nav.main { display: flex; gap: 22px; align-items: center; }
+nav.main a { text-decoration: none; color: var(--muted); font-size: .92rem; }
+nav.main a:hover { color: var(--fg); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font-display); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: .86rem; padding: 13px 22px; border-radius: 999px; border: 1px solid transparent; cursor: pointer; text-decoration: none; transition: transform .15s ease, box-shadow .2s ease; }
+.btn:hover { transform: translateY(-1px); }
+.btn.primary { background: linear-gradient(135deg, var(--blue), var(--indigo)); color: #fff; box-shadow: 0 8px 30px -8px rgba(80, 120, 255, .7); }
+.btn.ghost { border-color: var(--line); color: var(--fg); background: rgba(255,255,255,.02); }
+@media (max-width: 760px) { nav.main a:not(.btn) { display: none; } }
+
+/* Hero */
+.hero { padding-block: 56px 72px; display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; }
+.hero > * { min-width: 0; }
+.hero .copy { display: grid; gap: 22px; }
+.hero .cta { display: flex; flex-wrap: wrap; gap: 12px; }
+.hero .facts { display: flex; flex-wrap: wrap; gap: 8px 26px; color: var(--muted); font-size: .88rem; padding-top: 6px; }
+.hero .facts span::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); margin-right: 8px; vertical-align: middle; }
+.stage { position: relative; display: grid; place-items: center; aspect-ratio: 1 / 1.08; max-width: 100%; }
+.stage::before { content: ""; position: absolute; inset: 6% 4% 10%; border-radius: 50%; background: radial-gradient(closest-side, rgba(70, 110, 255, .38), rgba(58, 63, 224, .12) 55%, transparent 75%); filter: blur(6px); }
+.stage .ring { position: absolute; inset: 14% 0 18%; border: 2px solid rgba(214, 219, 232, .55); border-left-color: transparent; border-bottom-color: rgba(214,219,232,.12); border-radius: 50%; transform: rotate(-18deg) scaleY(.36); animation: spin 22s linear infinite; }
+.stage .moon { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #cfe8ff, var(--blue)); top: 22%; right: 6%; box-shadow: 0 0 18px var(--blue); }
+@keyframes spin { to { transform: rotate(342deg) scaleY(.36); } }
+.stage svg { position: relative; width: min(78%, 360px); height: auto; filter: drop-shadow(0 20px 40px rgba(20, 30, 120, .55)); animation: float 6s ease-in-out infinite; }
+@keyframes float { 50% { transform: translateY(-8px); } }
+.blink { animation: blink 5s infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.12); } }
+@media (max-width: 860px) { .hero { grid-template-columns: 1fr; padding-block: 36px 48px; } .stage { max-width: 380px; margin-inline: auto; width: 100%; } }
+
+section { padding-block: 72px; border-top: 1px solid var(--line); }
+.head { display: grid; gap: 14px; margin-bottom: 36px; }
+
+/* Sectores */
+.tabs { display: inline-flex; padding: 4px; gap: 4px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); margin-bottom: 28px; max-width: 100%; }
+.tabs button { font: inherit; font-family: var(--font-display); font-weight: 600; font-size: .86rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: none; border: 0; border-radius: 999px; padding: 10px 20px; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: #fff; background: linear-gradient(135deg, var(--blue), var(--indigo)); }
+.sector { display: grid; grid-template-columns: 1fr 1fr; gap: 28px 48px; }
+.sector > * { min-width: 0; }
+.sector .intro { display: grid; gap: 14px; align-content: start; }
+.tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface); }
+.tasks li { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.tasks li:last-child { border-bottom: 0; }
+.tasks b { font-weight: 600; }
+.tasks span { color: var(--muted); font-size: .9rem; grid-column: 1; }
+.tasks em { font-style: normal; font-family: var(--font-display); font-size: .8rem; color: var(--blue); letter-spacing: .06em; grid-row: 1; grid-column: 2; white-space: nowrap; }
+@media (max-width: 760px) { .sector { grid-template-columns: 1fr; } }
+
+/* App */
+.app { display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: center; }
+.app > * { min-width: 0; }
+.app .side { display: grid; gap: 22px; }
+.feat { display: grid; gap: 16px; list-style: none; margin: 0; padding: 0; }
+.feat li { display: grid; grid-template-columns: 34px 1fr; gap: 14px; }
+.feat i { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--surface-2); border: 1px solid var(--line); color: var(--blue); font-style: normal; font-family: var(--font-display); font-weight: 700; }
+.feat b { display: block; font-weight: 600; }
+.feat span { color: var(--muted); font-size: .94rem; }
+.phone { width: 322px; max-width: 100%; margin-inline: auto; padding: 11px; border-radius: 46px; background: linear-gradient(160deg, #2a2f4a, #0c0f20 40%, #1b2040); box-shadow: 0 40px 80px -30px rgba(40, 70, 255, .55), inset 0 0 0 1px rgba(255,255,255,.1); }
+.screen { position: relative; border-radius: 36px; overflow: hidden; background: #070918; height: 640px; display: flex; flex-direction: column; }
+.notch { position: absolute; top: 9px; left: 50%; transform: translateX(-50%); width: 92px; height: 24px; border-radius: 14px; background: #000; z-index: 3; }
+.status { display: flex; justify-content: space-between; padding: 12px 24px 0; font-size: .74rem; color: var(--silver); font-variant-numeric: tabular-nums; }
+.pages { flex: 1; overflow-y: auto; padding: 14px 16px 12px; scrollbar-width: none; }
+.pages::-webkit-scrollbar { display: none; }
+.pg { display: none; gap: 14px; align-content: start; }
+.pg.on { display: grid; }
+.appbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.appbar b { font-family: var(--font-display); letter-spacing: .24em; font-size: 1.05rem; }
+.mode { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
+.mode button { font: inherit; font-size: .72rem; border: 0; background: none; color: var(--muted); padding: 5px 11px; border-radius: 999px; cursor: pointer; font-weight: 600; }
+.mode button[aria-pressed="true"] { background: var(--surface-2); color: var(--fg); box-shadow: inset 0 0 0 1px var(--line); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px; display: grid; gap: 10px; }
+.hello { background: linear-gradient(150deg, rgba(93,176,255,.22), rgba(58,63,224,.28)); border-color: rgba(120,160,255,.35); }
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: .72rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: rgba(75, 227, 161, .12); color: var(--ok); width: fit-content; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill.busy { background: rgba(255, 199, 90, .12); color: var(--warn); }
+.big { font-family: var(--font-display); font-size: 1.35rem; font-weight: 600; line-height: 1.15; }
+.small { color: var(--muted); font-size: .8rem; }
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.metrics div { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: grid; gap: 2px; }
+.metrics b { font-family: var(--font-display); font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.metrics span { color: var(--muted); font-size: .68rem; }
+.meter { height: 6px; border-radius: 6px; background: rgba(255,255,255,.08); overflow: hidden; }
+.meter i { display: block; height: 100%; width: 82%; background: linear-gradient(90deg, var(--blue), var(--ok)); border-radius: 6px; }
+.dest { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.dest button { font: inherit; font-size: .84rem; font-weight: 500; text-align: left; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px; cursor: pointer; display: grid; gap: 1px; }
+.dest button small { color: var(--muted); font-size: .7rem; }
+.dest button:hover { border-color: rgba(120, 160, 255, .5); }
+.dest button.sel { border-color: var(--blue); background: rgba(93,176,255,.1); }
+.go { font: inherit; width: 100%; border: 0; border-radius: 14px; padding: 13px; font-family: var(--font-display); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: .84rem; color: #fff; background: linear-gradient(135deg, var(--blue), var(--indigo)); cursor: pointer; }
+.go:disabled { opacity: .45; cursor: default; }
+.mapbox { border: 1px solid var(--line); border-radius: 18px; background: #080b1b; overflow: hidden; }
+.mapbox svg { display: block; width: 100%; height: auto; }
+.bot { transition: transform 3.2s cubic-bezier(.45, .05, .3, 1); }
+.list { display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 11px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.row b { font-size: .88rem; font-weight: 600; }
+.row span { color: var(--muted); font-size: .76rem; grid-column: 1; }
+.row em { font-style: normal; font-size: .72rem; font-weight: 600; grid-row: 1 / span 2; grid-column: 2; align-self: center; padding: 3px 9px; border-radius: 999px; }
+.row em.done { color: var(--ok); background: rgba(75,227,161,.12); }
+.row em.go-now { color: var(--warn); background: rgba(255,199,90,.12); }
+.row em.wait { color: var(--muted); background: rgba(255,255,255,.06); }
+.tabbar { display: grid; grid-template-columns: repeat(3, 1fr); padding: 8px 10px 14px; border-top: 1px solid var(--line); background: #090b1c; }
+.tabbar button { font: inherit; border: 0; background: none; color: var(--muted); display: grid; justify-items: center; gap: 3px; font-size: .68rem; padding: 4px; cursor: pointer; }
+.tabbar svg { width: 22px; height: 22px; }
+.tabbar button[aria-selected="true"] { color: var(--blue); }
+.demo-note { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 12px; }
+@media (max-width: 900px) { .app { grid-template-columns: 1fr; gap: 36px; } .phone { order: -1; } }
+
+/* Cómo funciona */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--surface); }
+.steps > div { padding: 26px 24px; display: grid; gap: 10px; align-content: start; border-right: 1px solid var(--line); min-width: 0; }
+.steps > div:last-child { border-right: 0; }
+.steps .n { font-family: var(--font-display); color: var(--blue); font-size: .85rem; letter-spacing: .2em; font-weight: 600; }
+.steps p { color: var(--muted); font-size: .95rem; }
+@media (max-width: 760px) { .steps { grid-template-columns: 1fr; } .steps > div { border-right: 0; border-bottom: 1px solid var(--line); } .steps > div:last-child { border-bottom: 0; } }
+
+/* Especificaciones */
+.specs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.specs div { padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); display: grid; gap: 4px; min-width: 0; }
+.specs b { font-family: var(--font-display); font-size: 1.7rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.specs span { color: var(--muted); font-size: .86rem; }
+.fine { color: var(--muted); font-size: .84rem; margin-top: 16px; }
+@media (max-width: 860px) { .specs { grid-template-columns: repeat(2, 1fr); } }
+
+/* Contacto */
+.contact { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
+.contact > * { min-width: 0; }
+form { display: grid; gap: 14px; padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+label { display: grid; gap: 6px; font-size: .86rem; color: var(--muted); }
+input, select, textarea { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; width: 100%; }
+textarea { min-height: 92px; resize: vertical; }
+#formMsg { color: var(--ok); font-size: .9rem; min-height: 1.4em; }
+footer { padding-block: 36px 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: .86rem; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 16px 32px; justify-content: space-between; align-items: center; }
+footer img { width: 96px; height: 96px; border-radius: 10px; }
+footer .tag { letter-spacing: .22em; text-transform: uppercase; font-family: var(--font-display); font-size: .78rem; }
+@media (max-width: 860px) { .contact { grid-template-columns: 1fr; } }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#inicio" aria-label="Nova, inicio">
+      <img src="data:image/jpeg;base64,__EMBLEM__" alt="Emblema de Orion Nova Technologies">
+      <span><b>NOVA</b><small>Orion Nova Technologies</small></span>
+    </a>
+    <nav class="main" aria-label="Principal">
+      <a href="#sectores">Restaurantes y hoteles</a>
+      <a href="#app">App móvil</a>
+      <a href="#especificaciones">Especificaciones</a>
+      <a class="btn primary" href="#contacto">Solicitar demo</a>
+    </nav>
+  </div>
+</header>
+
+<main id="inicio">
+  <div class="wrap hero">
+    <div class="copy">
+      <p class="eyebrow">Robótica de servicio</p>
+      <h1>Nova atiende mesas y habitaciones.</h1>
+      <p class="lede">Un humanoide diseñado para restaurantes y hoteles. Lleva pedidos, guía a los huéspedes y entrega suministros, mientras tu equipo se dedica a recibir mejor a las personas.</p>
+      <div class="cta">
+        <a class="btn primary" href="#app">Probar la app</a>
+        <a class="btn ghost" href="#sectores">Ver qué hace</a>
+      </div>
+      <div class="facts">
+        <span>Español, inglés y portugués</span>
+        <span>Control desde el celular</span>
+        <span>8 h de autonomía</span>
+      </div>
+    </div>
+
+    <div class="stage" aria-hidden="false">
+      <div class="ring"></div>
+      <div class="moon"></div>
+      <svg viewBox="0 0 300 430" role="img" aria-label="Ilustración de Nova, el humanoide de servicio, con una bandeja en la mano">
+        <defs>
+          <linearGradient id="gBody" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#f2f5fc"/><stop offset=".55" stop-color="#c9d0e2"/><stop offset="1" stop-color="#8d96b3"/>
+          </linearGradient>
+          <linearGradient id="gBlue" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#7cc4ff"/><stop offset="1" stop-color="#3a3fe0"/>
+          </linearGradient>
+          <linearGradient id="gDark" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#1a2046"/><stop offset="1" stop-color="#05060f"/>
+          </linearGradient>
+          <radialGradient id="gEye" cx=".5" cy=".5" r=".5">
+            <stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#8fd0ff"/><stop offset="1" stop-color="#3a7bff" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <!-- piernas -->
+        <rect x="104" y="296" width="40" height="104" rx="18" fill="url(#gBody)"/>
+        <rect x="156" y="296" width="40" height="104" rx="18" fill="url(#gBody)"/>
+        <rect x="98" y="394" width="52" height="24" rx="12" fill="url(#gDark)"/>
+        <rect x="150" y="394" width="52" height="24" rx="12" fill="url(#gDark)"/>
+        <rect x="108" y="330" width="32" height="6" rx="3" fill="url(#gBlue)"/>
+        <rect x="160" y="330" width="32" height="6" rx="3" fill="url(#gBlue)"/>
+        <!-- brazo izquierdo -->
+        <rect x="46" y="150" width="32" height="104" rx="16" fill="url(#gBody)"/>
+        <circle cx="62" cy="256" r="15" fill="url(#gDark)"/>
+        <!-- torso -->
+        <path d="M82 138 Q150 118 218 138 L212 306 Q150 322 88 306 Z" fill="url(#gBody)"/>
+        <path d="M96 150 Q150 136 204 150 L200 290 Q150 302 100 290 Z" fill="url(#gDark)"/>
+        <path d="M150 168 L158 202 L192 210 L158 218 L150 252 L142 218 L108 210 L142 202 Z" fill="url(#gBlue)"/>
+        <path d="M150 168 L154 204 L150 210 L146 204 Z" fill="#fff" opacity=".85"/>
+        <rect x="112" y="268" width="76" height="5" rx="2.5" fill="url(#gBlue)" opacity=".8"/>
+        <!-- hombros -->
+        <circle cx="76" cy="146" r="22" fill="url(#gBlue)"/>
+        <circle cx="224" cy="146" r="22" fill="url(#gBlue)"/>
+        <!-- brazo derecho con bandeja -->
+        <path d="M224 160 L252 214 L228 232 L204 178 Z" fill="url(#gBody)" transform="translate(6 0)"/>
+        <circle cx="244" cy="226" r="14" fill="url(#gDark)"/>
+        <rect x="204" y="236" width="86" height="8" rx="4" fill="url(#gBody)"/>
+        <ellipse cx="248" cy="232" rx="30" ry="6" fill="url(#gBlue)" opacity=".9"/>
+        <path d="M232 228 q4 -22 16 -22 q12 0 16 22 z" fill="#f2f5fc" opacity=".92"/>
+        <rect x="228" y="226" width="40" height="4" rx="2" fill="#c9d0e2"/>
+        <!-- cuello y cabeza -->
+        <rect x="136" y="108" width="28" height="26" rx="8" fill="url(#gDark)"/>
+        <rect x="92" y="22" width="116" height="96" rx="44" fill="url(#gBody)"/>
+        <rect x="102" y="36" width="96" height="66" rx="32" fill="url(#gDark)"/>
+        <g class="blink">
+          <ellipse cx="128" cy="70" rx="13" ry="9" fill="url(#gEye)"/>
+          <ellipse cx="172" cy="70" rx="13" ry="9" fill="url(#gEye)"/>
+          <ellipse cx="128" cy="70" rx="6" ry="4.5" fill="#fff"/>
+          <ellipse cx="172" cy="70" rx="6" ry="4.5" fill="#fff"/>
+        </g>
+        <path d="M134 88 q16 10 32 0" stroke="#7cc4ff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".8"/>
+        <rect x="84" y="56" width="10" height="26" rx="5" fill="url(#gBlue)"/>
+        <rect x="206" y="56" width="10" height="26" rx="5" fill="url(#gBlue)"/>
+        <circle cx="150" cy="16" r="5" fill="#7cc4ff"/><rect x="148" y="16" width="4" height="10" fill="#8d96b3"/>
+      </svg>
+    </div>
+  </div>
+
+  <section id="sectores">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Dónde trabaja Nova</p>
+        <h2>Un humanoide, dos sectores.</h2>
+        <p class="lede">Elige el sector para ver las tareas que Nova asume en el día a día.</p>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Sector">
+        <button role="tab" id="tab-rest" aria-selected="true" data-sector="rest">Restaurantes</button>
+        <button role="tab" id="tab-hotel" aria-selected="false" data-sector="hotel">Hoteles</button>
+      </div>
+      <div class="sector" id="sectorPanel" role="tabpanel" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="app">
+    <div class="wrap app">
+      <div class="side">
+        <p class="eyebrow">App Nova</p>
+        <h2>Toda la operación en el celular.</h2>
+        <p class="lede">El encargado ve dónde está Nova, le asigna destinos y revisa lo que ya entregó. La demo de la derecha funciona: cambia de sector, envía a Nova a un destino y mira el mapa.</p>
+        <ul class="feat">
+          <li><i>1</i><div><b>Estado en vivo</b><span>Batería, ubicación y tarea actual de cada humanoide.</span></div></li>
+          <li><i>2</i><div><b>Envíos con un toque</b><span>Mesa 4, habitación 302 o la cocina. Nova calcula la ruta y avisa al llegar.</span></div></li>
+          <li><i>3</i><div><b>Historial de tareas</b><span>Qué entregó, a quién y cuánto tardó, para ajustar turnos.</span></div></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="phone">
+          <div class="screen" id="screen">
+            <div class="notch"></div>
+            <div class="status"><span id="clock">9:41</span><span>5G · 86%</span></div>
+            <div class="pages">
+              <section class="pg on" id="pg-inicio" style="padding:0;border:0">
+                <div class="appbar"><b>NOVA</b>
+                  <div class="mode" role="group" aria-label="Sector de la demo">
+                    <button type="button" data-mode="rest" aria-pressed="true">Restaurante</button>
+                    <button type="button" data-mode="hotel" aria-pressed="false">Hotel</button>
+                  </div>
+                </div>
+                <div class="card hello">
+                  <span class="pill" id="statePill">Disponible</span>
+                  <div class="big" id="stateTitle">Nova 01 espera una tarea</div>
+                  <div class="small" id="stateWhere">Estación de carga · Salón principal</div>
+                </div>
+                <div class="metrics">
+                  <div><b id="mBat">82%</b><span>Batería</span></div>
+                  <div><b id="mDone">14</b><span>Entregas hoy</span></div>
+                  <div><b id="mAvg">0:48</b><span>Tiempo medio</span></div>
+                </div>
+                <div class="card">
+                  <div class="small">Autonomía restante</div>
+                  <div class="meter"><i></i></div>
+                  <div class="small">Aprox. 6 h 30 min</div>
+                </div>
+              </section>
+
+              <section class="pg" id="pg-enviar" style="padding:0;border:0">
+                <div class="appbar"><b>ENVIAR</b><span class="small" id="sendHint">Elige un destino</span></div>
+                <div class="dest" id="dest"></div>
+                <button class="go" id="goBtn" type="button" disabled>Enviar a Nova</button>
+                <div class="mapbox" aria-label="Plano con la posición de Nova">
+                  <svg viewBox="0 0 280 200" id="mapSvg">
+                    <rect width="280" height="200" fill="#080b1b"/>
+                    <g id="mapRooms"></g>
+                    <g class="bot" id="bot" style="transform: translate(40px, 150px)">
+                      <circle r="16" fill="#5db0ff" opacity=".18"/>
+                      <circle r="9" fill="#5db0ff"/>
+                      <circle r="3.5" fill="#fff"/>
+                    </g>
+                  </svg>
+                </div>
+              </section>
+
+              <section class="pg" id="pg-historial" style="padding:0;border:0">
+                <div class="appbar"><b>HISTORIAL</b><span class="small" id="histCount">3 tareas</span></div>
+                <div class="list" id="hist"></div>
+              </section>
+            </div>
+            <div class="tabbar" role="tablist" aria-label="Secciones de la app">
+              <button type="button" role="tab" data-tab="inicio" aria-selected="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-6h4v6"/></svg>Inicio
+              </button>
+              <button type="button" role="tab" data-tab="enviar" aria-selected="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3L3 11l7 3 3 7z"/></svg>Enviar
+              </button>
+              <button type="button" role="tab" data-tab="historial" aria-selected="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Historial
+              </button>
+            </div>
+          </div>
+        </div>
+        <p class="demo-note">Demo con datos de ejemplo.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="como">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Puesta en marcha</p>
+        <h2>De la caja al servicio en tres pasos.</h2>
+      </div>
+      <div class="steps">
+        <div><span class="n">PASO 1</span><h3>Mapeo del local</h3><p>Nova recorre el salón o los pasillos una vez y guarda mesas, habitaciones, ascensores y zonas restringidas.</p></div>
+        <div><span class="n">PASO 2</span><h3>Conexión con tu equipo</h3><p>Se vincula a la app. Cada encargado recibe los permisos que le corresponden: cocina, recepción o gerencia.</p></div>
+        <div><span class="n">PASO 3</span><h3>Operación diaria</h3><p>Nova toma tareas de la cola, esquiva obstáculos, vuelve a cargar sola y deja el registro en el historial.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="especificaciones">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Especificaciones</p>
+        <h2>Pensado para pasillos y salones reales.</h2>
+      </div>
+      <div class="specs">
+        <div><b>1,60 m</b><span>Altura, a la medida de una mesa o un mostrador</span></div>
+        <div><b>8 h</b><span>Autonomía con una carga completa</span></div>
+        <div><b>10 kg</b><span>Carga útil en bandeja o compartimento</span></div>
+        <div><b>3</b><span>Idiomas de atención: ES, EN y PT</span></div>
+      </div>
+      <p class="fine">Valores objetivo del concepto. Se confirman con el prototipo y pueden cambiar.</p>
+    </div>
+  </section>
+
+  <section id="contacto">
+    <div class="wrap contact">
+      <div class="head" style="margin:0">
+        <p class="eyebrow">Hablemos</p>
+        <h2>Cuéntanos sobre tu restaurante u hotel.</h2>
+        <p class="lede">Indica el tipo de negocio y cuántas personas atienden hoy. Con eso preparamos una propuesta.</p>
+      </div>
+      <form id="leadForm" novalidate>
+        <label for="f-name">Nombre
+          <input id="f-name" name="name" autocomplete="name" placeholder="Tu nombre" required>
+        </label>
+        <label for="f-biz">Tipo de negocio
+          <select id="f-biz" name="biz"><option>Restaurante</option><option>Hotel</option><option>Ambos</option></select>
+        </label>
+        <label for="f-msg">Mensaje
+          <textarea id="f-msg" name="msg" placeholder="Cuántas mesas o habitaciones tienes"></textarea>
+        </label>
+        <button class="btn primary" type="submit">Enviar solicitud</button>
+        <p id="formMsg" role="status"></p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <img src="data:image/jpeg;base64,__LOGO__" alt="Logo de Orion Nova Technologies">
+    <p class="tag">Innovamos · Desarrollamos · Conectamos</p>
+    <p>Nova es un producto de Orion Nova Technologies.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  /* ---------- Sectores ---------- */
+  var SECTORS = {
+    rest: {
+      title: 'En el restaurante, Nova es el puente entre la cocina y la mesa.',
+      text: 'Reduce los viajes del personal y acorta la espera. Tu equipo conserva lo que más importa: recomendar, escuchar y resolver.',
+      tasks: [
+        ['Llevar platos a la mesa', 'Sale de la cocina con la bandeja y avisa al llegar.', 'Mesa 1–40'],
+        ['Recoger vajilla', 'Regresa los platos usados al área de lavado.', 'Continuo'],
+        ['Recibir y guiar', 'Saluda en la puerta y acompaña al grupo a su mesa.', 'Entrada'],
+        ['Mostrar el menú', 'Responde sobre ingredientes y alérgenos en tres idiomas.', 'ES · EN · PT']
+      ]
+    },
+    hotel: {
+      title: 'En el hotel, Nova atiende al huésped a cualquier hora.',
+      text: 'Entrega lo que el huésped pide sin que tenga que bajar a recepción, y libera al personal de los traslados cortos.',
+      tasks: [
+        ['Subir equipaje liviano', 'Acompaña al huésped hasta la habitación en el ascensor.', 'Hasta 10 kg'],
+        ['Entregar suministros', 'Toallas, cargadores, kit de aseo y botellas de agua.', 'Habitaciones'],
+        ['Guiar por el hotel', 'Lleva al spa, al restaurante o a la sala de eventos.', 'Áreas comunes'],
+        ['Servicio nocturno', 'Atiende pedidos de la madrugada con voz suave.', '24 h']
+      ]
+    }
+  };
+  var panel = $('#sectorPanel');
+  function renderSector(key) {
+    var s = SECTORS[key];
+    panel.innerHTML = '<div class="intro"><h3 style="font-size:1.6rem">' + s.title + '</h3><p class="lede">' + s.text + '</p></div>' +
+      '<ul class="tasks">' + s.tasks.map(function (t) {
+        return '<li><b>' + t[0] + '</b><em>' + t[2] + '</em><span>' + t[1] + '</span></li>';
+      }).join('') + '</ul>';
+    $$('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.sector === key)); });
+  }
+  $$('.tabs button').forEach(function (b) { b.addEventListener('click', function () { renderSector(b.dataset.sector); }); });
+  renderSector('rest');
+
+  /* ---------- App demo ---------- */
+  var MAPS = {
+    rest: {
+      home: { n: 'Estación de carga', x: 40, y: 150 },
+      rooms: [
+        { id: 'cocina', n: 'Cocina', sub: 'Pase de platos', x: 214, y: 40, rect: [170, 14, 100, 62] },
+        { id: 'm4', n: 'Mesa 4', sub: 'Terraza', x: 70, y: 52, rect: [18, 16, 96, 60] },
+        { id: 'm7', n: 'Mesa 7', sub: 'Salón', x: 140, y: 118, rect: [100, 98, 82, 52] },
+        { id: 'barra', n: 'Barra', sub: 'Bebidas', x: 232, y: 150, rect: [196, 112, 74, 76] }
+      ],
+      pageTitle: 'Nova 01 espera una tarea',
+      where: 'Estación de carga · Salón principal',
+      hist: [
+        ['Pizza Margarita', 'Cocina a Mesa 2 · 0:41', 'done'],
+        ['Dos bebidas', 'Barra a Mesa 9 · 0:35', 'done'],
+        ['Recoger vajilla', 'Mesa 5 a Lavado · 1:02', 'done']
+      ]
+    },
+    hotel: {
+      home: { n: 'Estación de carga', x: 40, y: 150 },
+      rooms: [
+        { id: 'recep', n: 'Recepción', sub: 'Planta baja', x: 74, y: 100, rect: [18, 84, 96, 60] },
+        { id: 'h302', n: 'Hab. 302', sub: 'Piso 3', x: 214, y: 40, rect: [170, 14, 100, 62] },
+        { id: 'h415', n: 'Hab. 415', sub: 'Piso 4', x: 232, y: 150, rect: [196, 112, 74, 76] },
+        { id: 'spa', n: 'Spa', sub: 'Piso 1', x: 76, y: 38, rect: [18, 14, 96, 58] }
+      ],
+      pageTitle: 'Nova 01 espera una tarea',
+      where: 'Estación de carga · Lobby',
+      hist: [
+        ['Toallas extra', 'Recepción a Hab. 210 · 1:12', 'done'],
+        ['Cargador USB-C', 'Recepción a Hab. 118 · 0:54', 'done'],
+        ['Guiar al spa', 'Lobby a Spa · 1:30', 'done']
+      ]
+    }
+  };
+  var state = { mode: 'rest', selected: null, busy: false, done: 14, bat: 82, hist: null, timer: null };
+  state.hist = MAPS.rest.hist.slice();
+
+  function setTab(t) {
+    $$('.tabbar button').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.tab === t)); });
+    $$('.pg').forEach(function (p) { p.classList.toggle('on', p.id === 'pg-' + t); });
+    $('.pages').scrollTop = 0;
+  }
+  $$('.tabbar button').forEach(function (b) { b.addEventListener('click', function () { setTab(b.dataset.tab); }); });
+
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+
+  function renderMap() {
+    var m = MAPS[state.mode], svg = '';
+    m.rooms.forEach(function (r) {
+      var sel = state.selected === r.id;
+      svg += '<rect x="' + r.rect[0] + '" y="' + r.rect[1] + '" width="' + r.rect[2] + '" height="' + r.rect[3] + '" rx="10" fill="' + (sel ? 'rgba(93,176,255,.16)' : '#0e1230') + '" stroke="' + (sel ? '#5db0ff' : 'rgba(140,170,255,.22)') + '"/>';
+      svg += '<text x="' + (r.rect[0] + 9) + '" y="' + (r.rect[1] + 18) + '" font-size="10" fill="#c7d0ee" font-family="Figtree, sans-serif" font-weight="600">' + esc(r.n) + '</text>';
+    });
+    svg += '<circle cx="' + m.home.x + '" cy="' + m.home.y + '" r="14" fill="none" stroke="rgba(75,227,161,.5)" stroke-dasharray="3 3"/>';
+    svg += '<text x="' + (m.home.x - 22) + '" y="' + (m.home.y + 28) + '" font-size="8.5" fill="#9aa4c7" font-family="Figtree, sans-serif">Carga</text>';
+    $('#mapRooms').innerHTML = svg;
+  }
+  function renderDest() {
+    var m = MAPS[state.mode];
+    $('#dest').innerHTML = m.rooms.map(function (r) {
+      return '<button type="button" data-id="' + r.id + '" class="' + (state.selected === r.id ? 'sel' : '') + '">' + esc(r.n) + '<small>' + esc(r.sub) + '</small></button>';
+    }).join('');
+    $$('#dest button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (state.busy) return;
+        state.selected = b.dataset.id;
+        $('#sendHint').textContent = 'Destino: ' + roomById(b.dataset.id).n;
+        $('#goBtn').disabled = false;
+        renderDest(); renderMap();
+      });
+    });
+  }
+  function roomById(id) { return MAPS[state.mode].rooms.filter(function (r) { return r.id === id; })[0]; }
+  function moveBot(x, y) { $('#bot').style.transform = 'translate(' + x + 'px, ' + y + 'px)'; }
+  function renderHist() {
+    $('#hist').innerHTML = state.hist.map(function (h) {
+      var label = h[2] === 'done' ? 'Entregado' : (h[2] === 'go-now' ? 'En camino' : 'En cola');
+      return '<div class="row"><b>' + esc(h[0]) + '</b><span>' + esc(h[1]) + '</span><em class="' + h[2] + '">' + label + '</em></div>';
+    }).join('');
+    $('#histCount').textContent = state.hist.length + ' tareas';
+  }
+  function setState(busy, title, where) {
+    var pill = $('#statePill');
+    pill.textContent = busy ? 'En servicio' : 'Disponible';
+    pill.classList.toggle('busy', busy);
+    $('#stateTitle').textContent = title;
+    $('#stateWhere').textContent = where;
+  }
+  function resetMode(mode) {
+    clearTimeout(state.timer);
+    state.mode = mode; state.selected = null; state.busy = false;
+    state.hist = MAPS[mode].hist.slice();
+    $$('.mode button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.mode === mode)); });
+    setState(false, MAPS[mode].pageTitle, MAPS[mode].where);
+    $('#sendHint').textContent = 'Elige un destino';
+    $('#goBtn').disabled = true; $('#goBtn').textContent = 'Enviar a Nova';
+    renderDest(); renderMap(); renderHist();
+    moveBot(MAPS[mode].home.x, MAPS[mode].home.y);
+  }
+  $$('.mode button').forEach(function (b) { b.addEventListener('click', function () { resetMode(b.dataset.mode); }); });
+
+  $('#goBtn').addEventListener('click', function () {
+    if (state.busy || !state.selected) return;
+    var r = roomById(state.selected), m = MAPS[state.mode];
+    state.busy = true;
+    $('#goBtn').disabled = true; $('#goBtn').textContent = 'Nova va en camino';
+    state.hist.unshift([state.mode === 'rest' ? 'Pedido para ' + r.n : 'Entrega en ' + r.n, 'Desde ' + (state.mode === 'rest' ? 'Cocina' : 'Recepción') + ' · en curso', 'go-now']);
+    renderHist();
+    setState(true, 'Nova 01 va hacia ' + r.n, 'Llegada estimada en 0:12');
+    moveBot(r.x, r.y);
+    state.timer = setTimeout(function () {
+      state.hist[0] = [state.hist[0][0], 'Entregado a ' + r.n + ' · 0:' + (38 + Math.floor(Math.random() * 12)), 'done'];
+      state.done += 1; state.bat = Math.max(20, state.bat - 1);
+      $('#mDone').textContent = state.done; $('#mBat').textContent = state.bat + '%';
+      renderHist();
+      setState(false, 'Nova 01 llegó a ' + r.n, 'Esperando que el cliente reciba');
+      state.timer = setTimeout(function () {
+        moveBot(m.home.x, m.home.y);
+        setState(false, 'Nova 01 vuelve a la estación', m.where);
+        state.busy = false; state.selected = null;
+        $('#goBtn').textContent = 'Enviar a Nova';
+        $('#sendHint').textContent = 'Elige un destino';
+        renderDest(); renderMap();
+      }, 2200);
+    }, 3400);
+  });
+
+  function tickClock() {
+    var d = new Date();
+    $('#clock').textContent = d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+  tickClock(); setInterval(tickClock, 30000);
+  resetMode('rest');
+
+  /* ---------- Formulario ---------- */
+  $('#leadForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = $('#f-name').value.trim(), msg = $('#formMsg');
+    if (!name) { msg.style.color = 'var(--warn)'; msg.textContent = 'Escribe tu nombre para continuar.'; $('#f-name').focus(); return; }
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Gracias, ' + name + '. Esta versión de presentación todavía no envía el formulario.';
+  });
+})();
+</script>

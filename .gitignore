@@ -1,0 +1,7 @@
+src/nova3.html
+src/check*.js
+src/index.out.html
+src/test.out.html
+src/config.test.json
+tests/*.png
+node_modules/
