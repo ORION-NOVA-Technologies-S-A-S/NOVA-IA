@@ -26,3 +26,17 @@
 .cform .mic[aria-pressed="true"] { background: #ff3d77; border-color: #ff3d77; color: #fff; animation: fabnudge 1s ease-in-out infinite; }
 .cform { display: flex; align-items: center; }
 .cform input { flex: 1; min-width: 0; }
+/* selector de idioma */
+.langbar { display: inline-flex; gap: 2px; margin-left: 10px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); flex: none; }
+.langbar button { font: inherit; font-size: .72rem; font-weight: 700; letter-spacing: .04em; border: 0; background: none; color: var(--muted); border-radius: 999px; padding: 5px 9px; cursor: pointer; min-width: 34px; }
+.langbar button:hover { color: var(--fg); }
+.langbar button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+.langbar button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+@media (max-width: 760px) { .langbar { margin-left: auto; } .langbar button { padding: 5px 7px; min-width: 30px; } }
+@media (max-width: 520px) {
+  header.top .brand small { display: none; }
+  header.top .brand b { font-size: .95rem; letter-spacing: .08em; }
+  .langbar { margin-left: auto; padding: 2px; }
+  .langbar button { padding: 4px 6px; min-width: 26px; font-size: .66rem; }
+  header.top nav.main { min-width: 0; flex: 0 1 auto; }
+}

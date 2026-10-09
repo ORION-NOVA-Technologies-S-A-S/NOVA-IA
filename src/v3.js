@@ -116,7 +116,7 @@ function addMsg(who, text, acts, cls) {
   scrollC(); return b;
 }
 async function novaSay(text, acts, state) {
-  text = plain(text); var b = addMsg('nova', '');
+  text = I18N.tr(plain(text)); var b = addMsg('nova', ''); b.setAttribute('data-notr', '1');
   var speaking = canSpeak(); speak(text);
   if (!speaking) avSet('talk', true);
   if (reduceMo || text.length > 400) b.textContent = text;
@@ -441,7 +441,7 @@ async function answerQA(text) {
 }
 async function sendChat(text) {
   text = clip(text, 200).trim(); if (!text || S.chat.busy) return;
-  stopSpeech(); S.chat.busy = true; addMsg('me', text);
+  stopSpeech(); S.chat.busy = true; addMsg('me', I18N.tr(text)); text = I18N.es(text);
   try {
     var n = norm(text), f = S.flow;
     if (f && !f.done && /^(cancelar|cancela|salir|ya no|olvidalo)/.test(n)) { f.done = true; $$('.mcard').forEach(freeze); await novaSay('Listo, cancelé el ' + (f.kind === 'hotel' ? 'proceso de reserva' : 'pedido') + '. Cuando quieras empezamos de nuevo.'); return; }

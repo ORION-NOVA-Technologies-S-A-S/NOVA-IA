@@ -499,6 +499,20 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: .88rem; min-width
 .cform .mic[aria-pressed="true"] { background: #ff3d77; border-color: #ff3d77; color: #fff; animation: fabnudge 1s ease-in-out infinite; }
 .cform { display: flex; align-items: center; }
 .cform input { flex: 1; min-width: 0; }
+/* selector de idioma */
+.langbar { display: inline-flex; gap: 2px; margin-left: 10px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); flex: none; }
+.langbar button { font: inherit; font-size: .72rem; font-weight: 700; letter-spacing: .04em; border: 0; background: none; color: var(--muted); border-radius: 999px; padding: 5px 9px; cursor: pointer; min-width: 34px; }
+.langbar button:hover { color: var(--fg); }
+.langbar button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+.langbar button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+@media (max-width: 760px) { .langbar { margin-left: auto; } .langbar button { padding: 5px 7px; min-width: 30px; } }
+@media (max-width: 520px) {
+  header.top .brand small { display: none; }
+  header.top .brand b { font-size: .95rem; letter-spacing: .08em; }
+  .langbar { margin-left: auto; padding: 2px; }
+  .langbar button { padding: 4px 6px; min-width: 26px; font-size: .66rem; }
+  header.top nav.main { min-width: 0; flex: 0 1 auto; }
+}
 
 </style>
 
@@ -525,7 +539,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: .88rem; min-width
         <button class="btn ghost" type="button" data-go="dir">Ver restaurantes de Neiva</button>
       </div>
       <div class="facts">
-        <span>Español, inglés y portugués</span>
+        <span>Español, inglés, portugués e italiano</span>
         <span>Control desde el celular</span>
         <span>8 h de autonomía</span>
       </div>
@@ -768,7 +782,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: .88rem; min-width
         <div><b>1,60 m</b><span>Altura, a la medida de una mesa o un mostrador</span></div>
         <div><b>8 h</b><span>Autonomía con una carga completa</span></div>
         <div><b>10 kg</b><span>Carga útil en bandeja o compartimento</span></div>
-        <div><b>3</b><span>Idiomas de atención: ES, EN y PT</span></div>
+        <div><b>4</b><span>Idiomas de atención: ES, EN, PT e IT</span></div>
       </div>
       <p class="fine">Valores objetivo del concepto. Se confirman con el prototipo y pueden cambiar.</p>
     </div>
@@ -1124,7 +1138,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: .88rem; min-width
         ['Llevar platos a la mesa', 'Sale de la cocina con la bandeja y avisa al llegar.', 'Mesa 1–40'],
         ['Recoger vajilla', 'Regresa los platos usados al área de lavado.', 'Continuo'],
         ['Recibir y guiar', 'Saluda en la puerta y acompaña al grupo a su mesa.', 'Entrada'],
-        ['Mostrar el menú', 'Responde sobre ingredientes y alérgenos en tres idiomas.', 'ES · EN · PT']
+        ['Mostrar el menú', 'Responde sobre ingredientes y alérgenos en cuatro idiomas.', 'ES · EN · PT · IT']
       ]
     },
     hotel: {
@@ -1313,7 +1327,7 @@ function clip(s, n) { return String(s == null ? '' : s).slice(0, n); }
 function fmtPhone(p) { p = String(p || ''); return /^\d{7}$/.test(p) ? '(8) ' + p.slice(0, 3) + ' ' + p.slice(3) : p; }
 function safeUrl(u) { try { var x = new URL(String(u || '').trim()); return x.protocol === 'https:' ? x.href : ''; } catch (e) { return ''; } }
 function validLogo(s) { return typeof s === 'string' && s.length < 90000 && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+\/=]+$/.test(s); }
-function when(t) { try { return new Date(t).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }); } catch (e) { return ''; } }
+function when(t) { try { return new Date(t).toLocaleString(typeof I18N !== 'undefined' ? I18N.loc() : 'es-CO', { dateStyle: 'short', timeStyle: 'short' }); } catch (e) { return ''; } }
 function b64(buf) { var a = new Uint8Array(buf), s = ''; for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s); }
 function unb64(s) { var b = atob(s), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
 function rand4() { var a = new Uint8Array(3); crypto.getRandomValues(a); return Array.prototype.map.call(a, function (x) { return x.toString(36); }).join('').slice(0, 4); }
@@ -2024,6 +2038,699 @@ function localAnswer(q, ctxId) {
   out.text = 'No encontré eso en mi base de datos. Prueba con un tipo de comida (pizza, comida china, típica huilense), el nombre de un restaurante o pregúntame cómo registrarte.';
   return out;
 }
+/* ============ Idiomas: ES · EN · PT · IT ============
+   El texto base de la app está en español. Este módulo traduce la interfaz mostrada
+   (texto, placeholders, títulos), los mensajes de Nova y la voz, sin tocar los datos
+   (nombres de restaurantes, direcciones, teléfonos, precios). */
+var I18N = (function () {
+  var LANGS = ['es', 'en', 'pt', 'it'], NAMES = { es: 'Español', en: 'English', pt: 'Português', it: 'Italiano' };
+  var LOC = { es: 'es-CO', en: 'en-US', pt: 'pt-BR', it: 'it-IT' };
+  var cur = 'es';
+  try { var sv = localStorage.getItem('nova.lang'); if (sv && LANGS.indexOf(sv) >= 0) cur = sv; } catch (e) { /* ok */ }
+  /* [es, en, pt, it] — frases completas o fragmentos (los fragmentos terminan en espacio o puntuación) */
+  var D = [
+    /* ---- navegación y portada ---- */
+    ['Inicio', 'Home', 'Início', 'Home'],
+    ['Restaurantes', 'Restaurants', 'Restaurantes', 'Ristoranti'],
+    ['Hoteles', 'Hotels', 'Hotéis', 'Hotel'],
+    ['Seguridad', 'Security', 'Segurança', 'Sicurezza'],
+    ['Panel', 'Dashboard', 'Painel', 'Pannello'],
+    ['Salir', 'Sign out', 'Sair', 'Esci'],
+    ['Ingresar', 'Sign in', 'Entrar', 'Accedi'],
+    ['Acceso', 'Access', 'Acesso', 'Accesso'],
+    ['Crear cuenta', 'Create account', 'Criar conta', 'Crea account'],
+    ['Mis pedidos', 'My orders', 'Meus pedidos', 'I miei ordini'],
+    ['Ver como cliente', 'View as customer', 'Ver como cliente', 'Vedi come cliente'],
+    ['Ver como restaurante', 'View as restaurant', 'Ver como restaurante', 'Vedi come ristorante'],
+    ['Mi restaurante', 'My restaurant', 'Meu restaurante', 'Il mio ristorante'],
+    ['Robótica de servicio', 'Service robotics', 'Robótica de serviço', 'Robotica di servizio'],
+    ['Nova atiende mesas y habitaciones.', 'Nova serves tables and rooms.', 'A Nova atende mesas e quartos.', 'Nova serve tavoli e camere.'],
+    ['Un humanoide diseñado para restaurantes y hoteles. Lleva pedidos, guía a los huéspedes y entrega suministros, mientras tu equipo se dedica a recibir mejor a las personas.',
+      'A humanoid designed for restaurants and hotels. It carries orders, guides guests and delivers supplies, while your team focuses on welcoming people better.',
+      'Um humanoide criado para restaurantes e hotéis. Leva pedidos, guia os hóspedes e entrega suprimentos, enquanto sua equipe se dedica a receber melhor as pessoas.',
+      'Un umanoide progettato per ristoranti e hotel. Porta gli ordini, accompagna gli ospiti e consegna le forniture, mentre il tuo team si dedica ad accogliere meglio le persone.'],
+    ['Pedir comida con Nova', 'Order food with Nova', 'Pedir comida com a Nova', 'Ordina cibo con Nova'],
+    ['Registrar mi negocio', 'Register my business', 'Cadastrar meu negócio', 'Registra la mia attività'],
+    ['Ver restaurantes de Neiva', 'See Neiva restaurants', 'Ver restaurantes de Neiva', 'Vedi i ristoranti di Neiva'],
+    ['Español, inglés, portugués e italiano', 'Spanish, English, Portuguese and Italian', 'Espanhol, inglês, português e italiano', 'Spagnolo, inglese, portoghese e italiano'],
+    ['Control desde el celular', 'Control from your phone', 'Controle pelo celular', 'Controllo dal cellulare'],
+    ['8 h de autonomía', '8 h of battery life', '8 h de autonomia', '8 h di autonomia'],
+    ['Toca a Nova', 'Tap Nova', 'Toque na Nova', 'Tocca Nova'],
+    ['Saludar a Nova', 'Say hello to Nova', 'Cumprimentar a Nova', 'Saluta Nova'],
+    ['Un humanoide, dos sectores.', 'One humanoid, two sectors.', 'Um humanoide, dois setores.', 'Un umanoide, due settori.'],
+    ['Elige el sector para ver las tareas que Nova asume en el día a día.', 'Choose a sector to see the tasks Nova takes on day to day.', 'Escolha o setor para ver as tarefas que a Nova assume no dia a dia.', 'Scegli il settore per vedere i compiti che Nova svolge ogni giorno.'],
+    ['En el restaurante, Nova es el puente entre la cocina y la mesa.', 'In the restaurant, Nova is the bridge between the kitchen and the table.', 'No restaurante, a Nova é a ponte entre a cozinha e a mesa.', 'Nel ristorante, Nova è il ponte tra la cucina e il tavolo.'],
+    ['En el hotel, Nova atiende al huésped a cualquier hora.', 'In the hotel, Nova assists guests at any hour.', 'No hotel, a Nova atende o hóspede a qualquer hora.', "In hotel, Nova assiste l'ospite a qualsiasi ora."],
+    ['Reduce los viajes del personal y acorta la espera. Tu equipo conserva lo que más importa: recomendar, escuchar y resolver.',
+      'It cuts staff trips and shortens the wait. Your team keeps what matters most: recommending, listening and solving.',
+      'Reduz as idas e vindas da equipe e encurta a espera. Sua equipe mantém o que mais importa: recomendar, ouvir e resolver.',
+      'Riduce gli spostamenti del personale e accorcia le attese. Il tuo team conserva ciò che conta di più: consigliare, ascoltare e risolvere.'],
+    ['Entregar suministros', 'Deliver supplies', 'Entregar suprimentos', 'Consegnare forniture'],
+    ['Recibir y guiar', 'Welcome and guide', 'Receber e guiar', 'Accogliere e accompagnare'],
+    ['Recoger vajilla', 'Collect dishes', 'Recolher louça', 'Ritirare le stoviglie'],
+    ['Guiar al spa', 'Guide to the spa', 'Guiar ao spa', 'Accompagnare alla spa'],
+    ['Guiar por el hotel', 'Guide around the hotel', 'Guiar pelo hotel', "Accompagnare nell'hotel"],
+    ['Subir equipaje liviano', 'Carry light luggage', 'Levar bagagem leve', 'Portare bagagli leggeri'],
+    ['Toallas extra', 'Extra towels', 'Toalhas extras', 'Asciugamani extra'],
+    ['Pase de platos', 'Plate pass', 'Passagem de pratos', 'Passaggio dei piatti'],
+    ['Sale de la cocina con la bandeja y avisa al llegar.', 'Leaves the kitchen with the tray and announces on arrival.', 'Sai da cozinha com a bandeja e avisa ao chegar.', 'Esce dalla cucina con il vassoio e avvisa quando arriva.'],
+    ['Saluda en la puerta y acompaña al grupo a su mesa.', 'Greets at the door and walks the group to their table.', 'Cumprimenta na porta e acompanha o grupo até a mesa.', 'Saluta alla porta e accompagna il gruppo al tavolo.'],
+    ['Regresa los platos usados al área de lavado.', 'Returns used plates to the washing area.', 'Leva os pratos usados de volta à área de lavagem.', "Riporta i piatti usati nell'area lavaggio."],
+    ['Acompaña al huésped hasta la habitación en el ascensor.', 'Accompanies the guest to the room by elevator.', 'Acompanha o hóspede até o quarto pelo elevador.', "Accompagna l'ospite in camera con l'ascensore."],
+    ['Toallas, cargadores, kit de aseo y botellas de agua.', 'Towels, chargers, toiletry kit and water bottles.', 'Toalhas, carregadores, kit de higiene e garrafas de água.', 'Asciugamani, caricatori, kit da bagno e bottiglie di acqua.'],
+    ['Entrega lo que el huésped pide sin que tenga que bajar a recepción, y libera al personal de los traslados cortos.',
+      'Delivers what the guest asks for without them going down to reception, and frees staff from short trips.',
+      'Entrega o que o hóspede pede sem que ele precise descer à recepção e libera a equipe dos deslocamentos curtos.',
+      "Consegna ciò che l'ospite chiede senza che debba scendere alla reception, e libera il personale dai piccoli spostamenti."],
+    ['Responde sobre ingredientes y alérgenos en cuatro idiomas.', 'Answers about ingredients and allergens in four languages.', 'Responde sobre ingredientes e alérgenos em quatro idiomas.', 'Risponde su ingredienti e allergeni in quattro lingue.'],
+    ['Mostrar el menú', 'Show the menu', 'Mostrar o cardápio', 'Mostra il menu'],
+    ['Idiomas de atención: ES, EN, PT e IT', 'Service languages: ES, EN, PT and IT', 'Idiomas de atendimento: ES, EN, PT e IT', 'Lingue di assistenza: ES, EN, PT e IT'],
+    ['Operación diaria', 'Daily operation', 'Operação diária', 'Operatività quotidiana'],
+    ['Puesta en marcha', 'Getting started', 'Colocação em operação', 'Avvio'],
+    ['De la caja al servicio en tres pasos.', 'From the box to service in three steps.', 'Da caixa ao serviço em três passos.', 'Dalla scatola al servizio in tre passi.'],
+    ['Mapeo del local', 'Venue mapping', 'Mapeamento do local', 'Mappatura del locale'],
+    ['Nova recorre el salón o los pasillos una vez y guarda mesas, habitaciones, ascensores y zonas restringidas.', 'Nova walks the dining room or hallways once and saves tables, rooms, elevators and restricted zones.', 'A Nova percorre o salão ou os corredores uma vez e guarda mesas, quartos, elevadores e zonas restritas.', 'Nova percorre la sala o i corridoi una volta e memorizza tavoli, camere, ascensori e zone riservate.'],
+    ['Conexión con tu equipo', 'Connection with your team', 'Conexão com sua equipe', 'Collegamento con il tuo team'],
+    ['Se vincula a la app. Cada encargado recibe los permisos que le corresponden: cocina, recepción o gerencia.', 'It links to the app. Each manager gets the permissions they need: kitchen, reception or management.', 'Vincula-se ao app. Cada responsável recebe as permissões que lhe cabem: cozinha, recepção ou gerência.', "Si collega all'app. Ogni responsabile riceve i permessi che gli spettano: cucina, reception o direzione."],
+    ['Envíos con un toque', 'Deliveries with one tap', 'Envios com um toque', 'Consegne con un tocco'],
+    ['Mesa 4, habitación 302 o la cocina. Nova calcula la ruta y avisa al llegar.', 'Table 4, room 302 or the kitchen. Nova calculates the route and announces on arrival.', 'Mesa 4, quarto 302 ou a cozinha. A Nova calcula a rota e avisa ao chegar.', 'Tavolo 4, camera 302 o la cucina. Nova calcola il percorso e avvisa all’arrivo.'],
+    ['Toda la operación en el celular.', 'The whole operation on your phone.', 'Toda a operação no celular.', "Tutta l'operatività sul cellulare."],
+    ['Batería, ubicación y tarea actual de cada humanoide.', "Battery, location and current task of each humanoid.", 'Bateria, localização e tarefa atual de cada humanoide.', 'Batteria, posizione e compito attuale di ogni umanoide.'],
+    ['Estado en vivo', 'Live status', 'Estado ao vivo', 'Stato in tempo reale'],
+    ['Historial de tareas', 'Task history', 'Histórico de tarefas', 'Cronologia dei compiti'],
+    ['Historial', 'History', 'Histórico', 'Cronologia'],
+    ['Qué entregó, a quién y cuánto tardó, para ajustar turnos.', 'What it delivered, to whom and how long it took, to adjust shifts.', 'O que entregou, a quem e quanto demorou, para ajustar turnos.', 'Cosa ha consegnato, a chi e in quanto tempo, per regolare i turni.'],
+    ['Enviar a Nova', 'Send to Nova', 'Enviar para a Nova', 'Invia a Nova'],
+    ['Elige un destino', 'Choose a destination', 'Escolha um destino', 'Scegli una destinazione'],
+    ['Entregas hoy', 'Deliveries today', 'Entregas hoje', 'Consegne oggi'],
+    ['Autonomía restante', 'Remaining battery', 'Autonomia restante', 'Autonomia residua'],
+    ['Especificaciones', 'Specifications', 'Especificações', 'Specifiche'],
+    ['Batería', 'Battery', 'Bateria', 'Batteria'],
+    ['Autonomía con una carga completa', 'Battery life on a full charge', 'Autonomia com carga completa', 'Autonomia con una carica completa'],
+    ['Carga útil en bandeja o compartimento', 'Payload on tray or compartment', 'Carga útil em bandeja ou compartimento', 'Carico utile su vassoio o scomparto'],
+    ['Altura, a la medida de una mesa o un mostrador', 'Height, sized for a table or a counter', 'Altura, na medida de uma mesa ou balcão', 'Altezza, a misura di un tavolo o di un bancone'],
+    ['Pensado para pasillos y salones reales.', 'Designed for real hallways and dining rooms.', 'Pensado para corredores e salões reais.', 'Pensato per corridoi e sale reali.'],
+    ['Valores objetivo del concepto. Se confirman con el prototipo y pueden cambiar.', 'Concept target values. Confirmed with the prototype and may change.', 'Valores-alvo do conceito. Serão confirmados com o protótipo e podem mudar.', 'Valori obiettivo del concept. Saranno confermati con il prototipo e potrebbero cambiare.'],
+    ['Aprox. 6 h 30 min', 'Approx. 6 h 30 min', 'Aprox. 6 h 30 min', 'Circa 6 h 30 min'],
+    ['Hasta 10 kg', 'Up to 10 kg', 'Até 10 kg', 'Fino a 10 kg'],
+    ['Hablemos', "Let's talk", 'Vamos conversar', 'Parliamone'],
+    ['Cuéntanos sobre tu restaurante u hotel.', 'Tell us about your restaurant or hotel.', 'Conte-nos sobre seu restaurante ou hotel.', 'Raccontaci del tuo ristorante o hotel.'],
+    ['Indica el tipo de negocio y cuántas personas atienden hoy. Con eso preparamos una propuesta.', 'Tell us the type of business and how many people serve today. With that we prepare a proposal.', 'Informe o tipo de negócio e quantas pessoas atendem hoje. Com isso preparamos uma proposta.', 'Indica il tipo di attività e quante persone servono oggi. Con questo prepariamo una proposta.'],
+    ['Tipo de negocio', 'Type of business', 'Tipo de negócio', 'Tipo di attività'],
+    ['Restaurante u hotel', 'Restaurant or hotel', 'Restaurante ou hotel', 'Ristorante o hotel'],
+    ['Ambos', 'Both', 'Ambos', 'Entrambi'],
+    ['Mensaje', 'Message', 'Mensagem', 'Messaggio'],
+    ['Enviar solicitud', 'Send request', 'Enviar solicitação', 'Invia richiesta'],
+    ['Nova es un producto de Orion Nova Technologies.', 'Nova is a product of Orion Nova Technologies.', 'A Nova é um produto da Orion Nova Technologies.', 'Nova è un prodotto di Orion Nova Technologies.'],
+    ['Innovamos · Desarrollamos · Conectamos', 'We Innovate · We Develop · We Connect', 'Inovamos · Desenvolvemos · Conectamos', 'Innoviamo · Sviluppiamo · Connettiamo'],
+    ['Asistente de restaurantes de Neiva', 'Neiva restaurant assistant', 'Assistente de restaurantes de Neiva', 'Assistente per i ristoranti di Neiva'],
+    ['Demo con datos de ejemplo.', 'Demo with sample data.', 'Demo com dados de exemplo.', 'Demo con dati di esempio.'],
+    /* ---- directorio ---- */
+    ['Restaurantes de Neiva', 'Neiva restaurants', 'Restaurantes de Neiva', 'Ristoranti di Neiva'],
+    ['El asistente que conoce cada restaurante de Neiva.', 'The assistant that knows every restaurant in Neiva.', 'O assistente que conhece cada restaurante de Neiva.', 'L’assistente che conosce ogni ristorante di Neiva.'],
+    ['Elige el tipo y te mostramos los restaurantes de Neiva de esa categoría.', 'Pick a type and we show you the Neiva restaurants in that category.', 'Escolha o tipo e mostramos os restaurantes de Neiva dessa categoria.', 'Scegli il tipo e ti mostriamo i ristoranti di Neiva di quella categoria.'],
+    ['Busca restaurantes por tipo: pizza, comida china, típica huilense y más.', 'Search restaurants by type: pizza, Chinese food, Huila regional cuisine and more.', 'Busque restaurantes por tipo: pizza, comida chinesa, típica huilense e mais.', 'Cerca ristoranti per tipo: pizza, cucina cinese, cucina tipica dell’Huila e altro.'],
+    ['Da dirección y teléfono de cada local.', 'Gives the address and phone of each venue.', 'Informa o endereço e o telefone de cada local.', 'Fornisce indirizzo e telefono di ogni locale.'],
+    ['Responde en el momento con la información que guarda la base de datos de Nova: tipo de comida, dirección, teléfono, horario y carta.',
+      'Answers instantly with the information stored in the Nova database: type of food, address, phone, hours and menu.',
+      'Responde na hora com as informações guardadas na base de dados da Nova: tipo de comida, endereço, telefone, horário e cardápio.',
+      'Risponde subito con le informazioni salvate nel database di Nova: tipo di cucina, indirizzo, telefono, orari e menu.'],
+    ['Aprende lo que carga administración: carta, horarios y preguntas frecuentes.', 'Learns what administration loads: menu, hours and FAQs.', 'Aprende o que a administração carrega: cardápio, horários e perguntas frequentes.', "Impara ciò che carica l'amministrazione: menu, orari e domande frequenti."],
+    ['Buscar restaurante', 'Search restaurant', 'Buscar restaurante', 'Cerca ristorante'],
+    ['Buscar por nombre o dirección', 'Search by name or address', 'Buscar por nome ou endereço', 'Cerca per nome o indirizzo'],
+    ['Buscar en esta categoría', 'Search in this category', 'Buscar nesta categoria', 'Cerca in questa categoria'],
+    ['Buscar restaurante en la categoría', 'Search restaurant in category', 'Buscar restaurante na categoria', 'Cerca ristorante nella categoria'],
+    ['Tipo de restaurante', 'Type of restaurant', 'Tipo de restaurante', 'Tipo di ristorante'],
+    ['Mostrar más', 'Show more', 'Mostrar mais', 'Mostra altri'],
+    ['Ver restaurantes', 'See restaurants', 'Ver restaurantes', 'Vedi ristoranti'],
+    ['Ver la carta', 'View the menu', 'Ver o cardápio', 'Vedi il menu'],
+    ['Visitar su página oficial', 'Visit official page', 'Visitar página oficial', 'Visita il sito ufficiale'],
+    ['Pedir con Nova', 'Order with Nova', 'Pedir com a Nova', 'Ordina con Nova'],
+    ['Reservar con Nova', 'Book with Nova', 'Reservar com a Nova', 'Prenota con Nova'],
+    ['Hablar con Nova', 'Talk to Nova', 'Falar com a Nova', 'Parla con Nova'],
+    ['Preguntarle a Nova', 'Ask Nova', 'Perguntar à Nova', 'Chiedi a Nova'],
+    ['Editar', 'Edit', 'Editar', 'Modifica'],
+    ['← Restaurantes', '← Restaurants', '← Restaurantes', '← Ristoranti'],
+    ['← Volver a administración', '← Back to administration', '← Voltar à administração', '← Torna all’amministrazione'],
+    ['← Cambiar tipo', '← Change type', '← Mudar tipo', '← Cambia tipo'],
+    ['No hay restaurantes con esa búsqueda.', 'No restaurants match that search.', 'Nenhum restaurante encontrado nessa busca.', 'Nessun ristorante corrisponde alla ricerca.'],
+    ['Fuentes: directorio de encolombia.com y listado de Tripadvisor para Neiva (consultados el 8 de octubre de 2026). El tipo se asigna según el nombre y la cocina publicada; los datos pueden estar desactualizados.',
+      'Sources: encolombia.com directory and Tripadvisor listing for Neiva (consulted on October 8, 2026). The type is assigned from the name and the published cuisine; data may be out of date.',
+      'Fontes: diretório do encolombia.com e listagem do Tripadvisor para Neiva (consultados em 8 de outubro de 2026). O tipo é atribuído pelo nome e pela cozinha publicada; os dados podem estar desatualizados.',
+      'Fonti: elenco di encolombia.com e Tripadvisor per Neiva (consultati l’8 ottobre 2026). Il tipo è assegnato in base al nome e alla cucina pubblicata; i dati potrebbero non essere aggiornati.'],
+    ['Si tu restaurante no aparece, usa el botón de abajo.', 'If your restaurant is not listed, use the button below.', 'Se o seu restaurante não aparecer, use o botão abaixo.', 'Se il tuo ristorante non compare, usa il pulsante qui sotto.'],
+    ['No hay coincidencias. Si tu restaurante no aparece, usa el botón de abajo.', 'No matches. If your restaurant is not listed, use the button below.', 'Sem resultados. Se o seu restaurante não aparecer, use o botão abaixo.', 'Nessuna corrispondenza. Se il tuo ristorante non compare, usa il pulsante qui sotto.'],
+    ['Mi restaurante no aparece', 'My restaurant is not listed', 'Meu restaurante não aparece', 'Il mio ristorante non compare'],
+    ['Elige tu restaurante', 'Choose your restaurant', 'Escolha seu restaurante', 'Scegli il tuo ristorante'],
+    ['Restaurante propuesto', 'Proposed restaurant', 'Restaurante proposto', 'Ristorante proposto'],
+    ['Sin dato', 'No data', 'Sem dados', 'Nessun dato'],
+    ['Sin dato. Pregúntale a Nova o al restaurante.', 'No data. Ask Nova or the restaurant.', 'Sem dados. Pergunte à Nova ou ao restaurante.', 'Nessun dato. Chiedi a Nova o al ristorante.'],
+    ['Oculto al público', 'Hidden from the public', 'Oculto ao público', 'Nascosto al pubblico'],
+    ['Registrado por administración', 'Registered by administration', 'Cadastrado pela administração', 'Registrato dall’amministrazione'],
+    ['Negocio de prueba para ensayar pedidos', 'Test business to practice orders', 'Negócio de teste para praticar pedidos', 'Attività di prova per provare gli ordini'],
+    ['Negocio de prueba para ensayar reservas', 'Test business to practice bookings', 'Negócio de teste para praticar reservas', 'Attività di prova per provare le prenotazioni'],
+    ['Restaurantes de pizza', 'Pizza restaurants', 'Restaurantes de pizza', 'Ristoranti di pizza'],
+    ['El logo es provisional hasta que administración suba el real.', 'The logo is provisional until administration uploads the real one.', 'O logo é provisório até que a administração envie o oficial.', 'Il logo è provvisorio finché l’amministrazione non carica quello ufficiale.'],
+    ['dentro de Nova. No es el sitio oficial del restaurante.', 'inside Nova. It is not the restaurant’s official site.', 'dentro da Nova. Não é o site oficial do restaurante.', 'dentro Nova. Non è il sito ufficiale del ristorante.'],
+    ['Directorio de encolombia.com', 'encolombia.com directory', 'Diretório do encolombia.com', 'Elenco di encolombia.com'],
+    /* ---- cuenta y seguridad ---- */
+    ['¿Cómo vas a usar Nova?', 'How will you use Nova?', 'Como você vai usar a Nova?', 'Come userai Nova?'],
+    ['Cliente', 'Customer', 'Cliente', 'Cliente'],
+    ['Pido comida o reservo hotel', 'I order food or book a hotel', 'Peço comida ou reservo hotel', 'Ordino cibo o prenoto un hotel'],
+    ['Usuario', 'User', 'Usuário', 'Utente'],
+    ['Registro mi negocio en Nova', 'I register my business on Nova', 'Cadastro meu negócio na Nova', 'Registro la mia attività su Nova'],
+    ['Administración', 'Administration', 'Administração', 'Amministrazione'],
+    ['Gestiono la plataforma', 'I manage the platform', 'Gerencio a plataforma', 'Gestisco la piattaforma'],
+    ['Administración solo se activa si la plataforma confirma permisos de editor.', 'Administration is only enabled if the platform confirms editor permissions.', 'A administração só é ativada se a plataforma confirmar permissões de editor.', 'L’amministrazione si attiva solo se la piattaforma conferma i permessi di editor.'],
+    ['Contraseña', 'Password', 'Senha', 'Password'],
+    ['Repetir contraseña', 'Repeat password', 'Repetir senha', 'Ripeti password'],
+    ['Ver', 'Show', 'Ver', 'Mostra'],
+    ['Nombre', 'Name', 'Nome', 'Nome'],
+    ['Tu nombre', 'Your name', 'Seu nome', 'Il tuo nome'],
+    ['Celular (para recuperar tu contraseña)', 'Mobile (to recover your password)', 'Celular (para recuperar sua senha)', 'Cellulare (per recuperare la password)'],
+    ['Enviar el código por', 'Send the code via', 'Enviar o código por', 'Invia il codice tramite'],
+    ['SMS a tu celular', 'SMS to your phone', 'SMS para o seu celular', 'SMS al tuo cellulare'],
+    ['Mensaje de texto', 'Text message', 'Mensagem de texto', 'Messaggio di testo'],
+    ['Mensaje a tu celular', 'Message to your phone', 'Mensagem para o seu celular', 'Messaggio al tuo cellulare'],
+    ['¿Olvidaste tu contraseña?', 'Forgot your password?', 'Esqueceu sua senha?', 'Hai dimenticato la password?'],
+    ['Protegido por ORI SEGURITY', 'Protected by ORI SEGURITY', 'Protegido por ORI SEGURITY', 'Protetto da ORI SEGURITY'],
+    ['ORI SEGURITY protege cada cuenta.', 'ORI SEGURITY protects every account.', 'A ORI SEGURITY protege cada conta.', 'ORI SEGURITY protegge ogni account.'],
+    ['La capa de seguridad de Orion Nova Technologies vigila el ingreso, los roles y los datos de cada restaurante.', 'The Orion Nova Technologies security layer watches sign-in, roles and each restaurant’s data.', 'A camada de segurança da Orion Nova Technologies vigia o acesso, os papéis e os dados de cada restaurante.', 'Il livello di sicurezza di Orion Nova Technologies sorveglia accessi, ruoli e dati di ogni ristorante.'],
+    ['Ciberseguridad', 'Cybersecurity', 'Cibersegurança', 'Cybersicurezza'],
+    ['Contraseñas con hash', 'Hashed passwords', 'Senhas com hash', 'Password con hash'],
+    ['Tu contraseña no se guarda. Se transforma con PBKDF2-SHA256 y una sal única por cuenta.', 'Your password is not stored. It is transformed with PBKDF2-SHA256 and a unique salt per account.', 'Sua senha não é guardada. Ela é transformada com PBKDF2-SHA256 e um sal único por conta.', 'La tua password non viene salvata. Viene trasformata con PBKDF2-SHA256 e un salt unico per account.'],
+    ['Bloqueo por intentos', 'Lockout after attempts', 'Bloqueio por tentativas', 'Blocco dopo i tentativi'],
+    ['Después de 5 intentos fallidos la cuenta se bloquea durante 5 minutos.', 'After 5 failed attempts the account is locked for 5 minutes.', 'Após 5 tentativas falhas a conta é bloqueada por 5 minutos.', 'Dopo 5 tentativi falliti l’account viene bloccato per 5 minuti.'],
+    ['Cierre por inactividad', 'Inactivity sign-out', 'Encerramento por inatividade', 'Disconnessione per inattività'],
+    ['La sesión termina sola a los 10 minutos sin actividad.', 'The session ends on its own after 10 minutes of inactivity.', 'A sessão termina sozinha após 10 minutos sem atividade.', 'La sessione termina da sola dopo 10 minuti di inattività.'],
+    ['Roles verificados', 'Verified roles', 'Papéis verificados', 'Ruoli verificati'],
+    ['Registro de auditoría', 'Audit log', 'Registro de auditoria', 'Registro di controllo'],
+    ['Registros, ingresos y cambios quedan anotados. Solo administración los ve.', 'Registrations, sign-ins and changes are recorded. Only administration sees them.', 'Cadastros, acessos e alterações ficam registrados. Só a administração os vê.', 'Registrazioni, accessi e modifiche vengono annotati. Solo l’amministrazione li vede.'],
+    ['Datos limpios', 'Clean data', 'Dados limpos', 'Dati puliti'],
+    ['Todo texto se escapa antes de mostrarse y los enlaces externos deben ser https.', 'All text is escaped before being shown and external links must be https.', 'Todo texto é tratado antes de ser exibido e os links externos devem ser https.', 'Ogni testo viene sanificato prima di essere mostrato e i link esterni devono essere https.'],
+    ['Alcance: ORI SEGURITY protege esta versión de presentación. Para recibir clientes de Neiva desde internet público hace falta un servidor propio con base de datos, certificados y copias de seguridad.',
+      'Scope: ORI SEGURITY protects this presentation version. To receive Neiva customers from the public internet you need your own server with a database, certificates and backups.',
+      'Alcance: a ORI SEGURITY protege esta versão de apresentação. Para receber clientes de Neiva pela internet pública é necessário um servidor próprio com banco de dados, certificados e backups.',
+      'Ambito: ORI SEGURITY protegge questa versione di presentazione. Per ricevere clienti di Neiva da internet pubblico serve un server proprio con database, certificati e backup.'],
+    ['Usuario o contraseña incorrectos.', 'Incorrect username or password.', 'Usuário ou senha incorretos.', 'Nome utente o password errati.'],
+    ['Escribe tu usuario y tu contraseña.', 'Enter your username and password.', 'Digite seu usuário e sua senha.', 'Inserisci nome utente e password.'],
+    ['Ese usuario ya existe. Elige otro o ingresa.', 'That username already exists. Pick another or sign in.', 'Esse usuário já existe. Escolha outro ou entre.', 'Questo nome utente esiste già. Scegline un altro o accedi.'],
+    ['Las contraseñas no coinciden.', 'Passwords do not match.', 'As senhas não coincidem.', 'Le password non coincidono.'],
+    ['El usuario debe tener 3 a 20 caracteres: letras, números, punto o guion bajo.', 'The username must be 3 to 20 characters: letters, numbers, dot or underscore.', 'O usuário deve ter de 3 a 20 caracteres: letras, números, ponto ou sublinhado.', 'Il nome utente deve avere da 3 a 20 caratteri: lettere, numeri, punto o trattino basso.'],
+    ['3 a 20 caracteres: letras, números, punto o guion bajo.', '3 to 20 characters: letters, numbers, dot or underscore.', '3 a 20 caracteres: letras, números, ponto ou sublinhado.', 'Da 3 a 20 caratteri: lettere, numeri, punto o trattino basso.'],
+    ['Mínimo 10 caracteres, con tres de estos: minúscula, mayúscula, número, símbolo.', 'At least 10 characters, with three of these: lowercase, uppercase, number, symbol.', 'Mínimo de 10 caracteres, com três destes: minúscula, maiúscula, número, símbolo.', 'Minimo 10 caratteri, con tre di questi: minuscola, maiuscola, numero, simbolo.'],
+    ['Combina al menos tres tipos: minúscula, mayúscula, número y símbolo.', 'Combine at least three types: lowercase, uppercase, number and symbol.', 'Combine pelo menos três tipos: minúscula, maiúscula, número e símbolo.', 'Combina almeno tre tipi: minuscola, maiuscola, numero e simbolo.'],
+    ['Escribe tu celular colombiano de 10 dígitos (empieza por 3).', 'Enter your 10-digit Colombian mobile number (starts with 3).', 'Digite seu celular colombiano de 10 dígitos (começa com 3).', 'Inserisci il tuo cellulare colombiano di 10 cifre (inizia con 3).'],
+    ['Escribe un celular válido (7 a 10 dígitos).', 'Enter a valid phone number (7 to 10 digits).', 'Digite um celular válido (7 a 10 dígitos).', 'Inserisci un numero valido (da 7 a 10 cifre).'],
+    ['Escribe un celular válido.', 'Enter a valid phone number.', 'Digite um celular válido.', 'Inserisci un numero valido.'],
+    ['Creando tu cuenta…', 'Creating your account…', 'Criando sua conta…', 'Creazione dell’account…'],
+    ['Cuenta creada. Ahora elige tu restaurante.', 'Account created. Now choose your restaurant.', 'Conta criada. Agora escolha seu restaurante.', 'Account creato. Ora scegli il tuo ristorante.'],
+    ['Cuenta de cliente creada.', 'Customer account created.', 'Conta de cliente criada.', 'Account cliente creato.'],
+    ['No se pudo crear la cuenta.', 'The account could not be created.', 'Não foi possível criar a conta.', 'Impossibile creare l’account.'],
+    ['No se pudo ingresar.', 'Could not sign in.', 'Não foi possível entrar.', 'Impossibile accedere.'],
+    ['Demasiados intentos. Espera unos minutos.', 'Too many attempts. Wait a few minutes.', 'Tentativas demais. Aguarde alguns minutos.', 'Troppi tentativi. Attendi qualche minuto.'],
+    ['Demasiadas solicitudes seguidas. Espera un momento.', 'Too many requests in a row. Wait a moment.', 'Solicitações demais seguidas. Aguarde um momento.', 'Troppe richieste consecutive. Attendi un momento.'],
+    ['Tu sesión se cerró por inactividad (10 minutos).', 'Your session was closed due to inactivity (10 minutes).', 'Sua sessão foi encerrada por inatividade (10 minutos).', 'La sessione è stata chiusa per inattività (10 minuti).'],
+    ['Sesión activa: ', 'Active session: ', 'Sessão ativa: ', 'Sessione attiva: '],
+    ['Sin sesión iniciada', 'Not signed in', 'Sem sessão iniciada', 'Nessuna sessione attiva'],
+    ['Ingresa primero a tu cuenta.', 'Sign in to your account first.', 'Entre primeiro na sua conta.', 'Accedi prima al tuo account.'],
+    ['Ingresar para pagar', 'Sign in to pay', 'Entrar para pagar', 'Accedi per pagare'],
+    ['No hay conexión con el servidor de Nova. Revisa tu internet e intenta de nuevo.', 'No connection to the Nova server. Check your internet and try again.', 'Sem conexão com o servidor da Nova. Verifique sua internet e tente novamente.', 'Nessuna connessione al server di Nova. Controlla internet e riprova.'],
+    ['No hay conexión con el servidor de Nova.', 'No connection to the Nova server.', 'Sem conexão com o servidor da Nova.', 'Nessuna connessione al server di Nova.'],
+    ['No hay conexión con el servidor.', 'No connection to the server.', 'Sem conexão com o servidor.', 'Nessuna connessione al server.'],
+    ['Sin conexión con el servidor.', 'No connection to the server.', 'Sem conexão com o servidor.', 'Nessuna connessione al server.'],
+    ['Algo salió mal. Inténtalo de nuevo.', 'Something went wrong. Please try again.', 'Algo deu errado. Tente novamente.', 'Qualcosa è andato storto. Riprova.'],
+    ['No se pudo completar. Intenta de nuevo.', 'Could not complete. Try again.', 'Não foi possível concluir. Tente novamente.', 'Impossibile completare. Riprova.'],
+    ['No se pudo guardar.', 'Could not save.', 'Não foi possível salvar.', 'Impossibile salvare.'],
+    ['Cambios guardados.', 'Changes saved.', 'Alterações salvas.', 'Modifiche salvate.'],
+    ['Tu nivel de acceso actual no permite guardar esto.', 'Your current access level does not allow saving this.', 'Seu nível de acesso atual não permite salvar isto.', 'Il tuo livello di accesso attuale non permette di salvare questo.'],
+    /* ---- pedidos y panel ---- */
+    ['Pedidos y mis compras', 'Orders and my purchases', 'Pedidos e minhas compras', 'Ordini e miei acquisti'],
+    ['Estado en vivo. Los pagos por PSE son de prueba.', 'Live status. PSE payments are for testing.', 'Estado ao vivo. Os pagamentos por PSE são de teste.', 'Stato in tempo reale. I pagamenti PSE sono di prova.'],
+    ['Pedidos', 'Orders', 'Pedidos', 'Ordini'],
+    ['Todos los pedidos', 'All orders', 'Todos os pedidos', 'Tutti gli ordini'],
+    ['Liquidación', 'Settlement', 'Liquidação', 'Liquidazione'],
+    ['Resumen', 'Summary', 'Resumo', 'Riepilogo'],
+    ['Registros', 'Registrations', 'Cadastros', 'Registrazioni'],
+    ['Solicitudes', 'Requests', 'Solicitações', 'Richieste'],
+    ['Conocimiento de Nova', 'Nova knowledge', 'Conhecimento da Nova', 'Conoscenza di Nova'],
+    ['Panel de Nova', 'Nova dashboard', 'Painel da Nova', 'Pannello di Nova'],
+    ['Gestiona los restaurantes de Neiva, los registros, el conocimiento de NOVA FLOW IA y revisa ORI SEGURITY.', 'Manage the Neiva restaurants, registrations, NOVA FLOW IA knowledge and review ORI SEGURITY.', 'Gerencie os restaurantes de Neiva, os cadastros, o conhecimento da NOVA FLOW IA e revise a ORI SEGURITY.', 'Gestisci i ristoranti di Neiva, le registrazioni, la conoscenza di NOVA FLOW IA e controlla ORI SEGURITY.'],
+    ['PSE prueba', 'PSE test', 'PSE teste', 'PSE prova'],
+    ['Aceptar pedido', 'Accept order', 'Aceitar pedido', 'Accetta ordine'],
+    ['Empezar a preparar', 'Start preparing', 'Começar a preparar', 'Inizia a preparare'],
+    ['Enviar al cliente', 'Send to customer', 'Enviar ao cliente', 'Invia al cliente'],
+    ['Cliente llegó', 'Customer arrived', 'Cliente chegou', 'Cliente arrivato'],
+    ['Confirmar reserva', 'Confirm booking', 'Confirmar reserva', 'Conferma prenotazione'],
+    ['Copiar texto', 'Copy text', 'Copiar texto', 'Copia testo'],
+    ['Abrir correo', 'Open email', 'Abrir e-mail', 'Apri email'],
+    ['Cargar carta y correo', 'Load menu and email', 'Carregar cardápio e e-mail', 'Carica menu ed email'],
+    ['Cargar tarifas y correo', 'Load rates and email', 'Carregar tarifas e e-mail', 'Carica tariffe ed email'],
+    ['Aún no hay eventos.', 'No events yet.', 'Ainda não há eventos.', 'Ancora nessun evento.'],
+    ['Sin movimientos.', 'No activity.', 'Sem movimentos.', 'Nessun movimento.'],
+    ['Comisión Nova', 'Nova fee', 'Comissão Nova', 'Commissione Nova'],
+    ['Comisión Nova: ', 'Nova fee: ', 'Comissão Nova: ', 'Commissione Nova: '],
+    ['Para el negocio', 'For the business', 'Para o negócio', 'Per l’attività'],
+    ['Total pagado por el cliente: ', 'Total paid by the customer: ', 'Total pago pelo cliente: ', 'Totale pagato dal cliente: '],
+    ['Total pagado por el cliente', 'Total paid by the customer', 'Total pago pelo cliente', 'Totale pagato dal cliente'],
+    ['Valor para el negocio: ', 'Value for the business: ', 'Valor para o negócio: ', 'Valore per l’attività: '],
+    ['Nova no envía correos por sí sola desde esta página: el aviso al negocio llega a su panel de Pedidos y el correo se abre listo para enviar.', 'Nova does not send emails by itself from this page: the notice reaches the business’s Orders panel and the email opens ready to send.', 'A Nova não envia e-mails sozinha a partir desta página: o aviso chega ao painel de Pedidos do negócio e o e-mail abre pronto para enviar.', 'Nova non invia email da sola da questa pagina: l’avviso arriva al pannello Ordini dell’attività e l’email si apre pronta da inviare.'],
+    [': el negocio aún no tiene correo cargado. Copia el texto y envíalo, o pídele a administración que lo registre.', ': the business has no email on file yet. Copy the text and send it, or ask administration to register it.', ': o negócio ainda não tem e-mail cadastrado. Copie o texto e envie, ou peça à administração que o registre.', ': l’attività non ha ancora un’email registrata. Copia il testo e invialo, oppure chiedi all’amministrazione di registrarla.'],
+    ['Restaurante agregado.', 'Restaurant added.', 'Restaurante adicionado.', 'Ristorante aggiunto.'],
+    ['Solicitud aprobada.', 'Request approved.', 'Solicitação aprovada.', 'Richiesta approvata.'],
+    ['Solicitud enviada a administración.', 'Request sent to administration.', 'Solicitação enviada à administração.', 'Richiesta inviata all’amministrazione.'],
+    ['Solicitud enviada. Administración la revisará.', 'Request sent. Administration will review it.', 'Solicitação enviada. A administração irá analisá-la.', 'Richiesta inviata. L’amministrazione la esaminerà.'],
+    ['No hay solicitudes de restaurantes nuevos.', 'There are no new restaurant requests.', 'Não há solicitações de novos restaurantes.', 'Non ci sono richieste di nuovi ristoranti.'],
+    ['Todavía no hay restaurantes registrados por usuarios.', 'No restaurants registered by users yet.', 'Ainda não há restaurantes cadastrados por usuários.', 'Ancora nessun ristorante registrato dagli utenti.'],
+    ['Persona sin nombre visible', 'Person without a visible name', 'Pessoa sem nome visível', 'Persona senza nome visibile'],
+    ['Persona asignada al restaurante.', 'Person assigned to the restaurant.', 'Pessoa designada ao restaurante.', 'Persona assegnata al ristorante.'],
+    ['Escribe el nombre del restaurante.', 'Enter the restaurant name.', 'Digite o nome do restaurante.', 'Inserisci il nome del ristorante.'],
+    ['Escribe la pregunta y la respuesta.', 'Enter the question and the answer.', 'Digite a pergunta e a resposta.', 'Inserisci la domanda e la risposta.'],
+    ['Usa una imagen PNG, JPG o WebP.', 'Use a PNG, JPG or WebP image.', 'Use uma imagem PNG, JPG ou WebP.', 'Usa un’immagine PNG, JPG o WebP.'],
+    ['El logo quedó demasiado pesado.', 'The logo ended up too heavy.', 'O logo ficou pesado demais.', 'Il logo è troppo pesante.'],
+    ['No se pudo leer la imagen.', 'Could not read the image.', 'Não foi possível ler a imagem.', 'Impossibile leggere l’immagine.'],
+    ['El correo no es válido.', 'The email is not valid.', 'O e-mail não é válido.', 'L’email non è valida.'],
+    ['El teléfono solo puede llevar números, espacios, + ( ) y guion.', 'The phone number can only contain digits, spaces, + ( ) and hyphens.', 'O telefone só pode ter números, espaços, + ( ) e hífen.', 'Il telefono può contenere solo numeri, spazi, + ( ) e trattini.'],
+    ['Vista de ejemplo: así ve Nova un cliente.', 'Sample view: this is how Nova sees a customer.', 'Visualização de exemplo: assim a Nova vê um cliente.', 'Vista di esempio: così Nova vede un cliente.'],
+    ['Vista de ejemplo: así ve Nova un restaurante.', 'Sample view: this is how Nova sees a restaurant.', 'Visualização de exemplo: assim a Nova vê um restaurante.', 'Vista di esempio: così Nova vede un ristorante.'],
+    ['Son precios de ejemplo del negocio de prueba.', 'These are sample prices from the test business.', 'São preços de exemplo do negócio de teste.', 'Sono prezzi di esempio dell’attività di prova.'],
+    ['Son tarifas de ejemplo del hotel de prueba.', 'These are sample rates from the test hotel.', 'São tarifas de exemplo do hotel de teste.', 'Sono tariffe di esempio dell’hotel di prova.'],
+    /* ---- estados ---- */
+    ['Aceptado', 'Accepted', 'Aceito', 'Accettato'],
+    ['Preparando', 'Preparing', 'Preparando', 'In preparazione'],
+    ['En camino', 'On the way', 'A caminho', 'In arrivo'],
+    ['Entregado', 'Delivered', 'Entregue', 'Consegnato'],
+    ['Cancelado', 'Cancelled', 'Cancelado', 'Annullato'],
+    ['Nuevo', 'New', 'Novo', 'Nuovo'],
+    ['Confirmada', 'Confirmed', 'Confirmada', 'Confermata'],
+    ['Hospedado', 'Checked in', 'Hospedado', 'Alloggiato'],
+    ['Finalizada', 'Completed', 'Finalizada', 'Conclusa'],
+    ['En servicio', 'In service', 'Em serviço', 'In servizio'],
+    ['En cola', 'Queued', 'Na fila', 'In coda'],
+    ['Disponible', 'Available', 'Disponível', 'Disponibile'],
+    /* ---- chat NOVA FLOW IA ---- */
+    ['Pide comida o reserva hotel en Neiva', 'Order food or book a hotel in Neiva', 'Peça comida ou reserve hotel em Neiva', 'Ordina cibo o prenota un hotel a Neiva'],
+    ['Hablando sobre ', 'Talking about ', 'Falando sobre ', 'Parlando di '],
+    ['Te escucho…', 'Listening…', 'Estou ouvindo…', 'Ti ascolto…'],
+    ['Quiero comer pollo asado', 'I want to eat roast chicken', 'Quero comer frango assado', 'Voglio mangiare pollo arrosto'],
+    ['Quiero un hotel por el rato', 'I want a hotel by the hour', 'Quero um hotel por hora', 'Voglio un hotel a ore'],
+    ['¿Cómo funciona el pago?', 'How does payment work?', 'Como funciona o pagamento?', 'Come funziona il pagamento?'],
+    ['Quiero hacer un pedido', 'I want to place an order', 'Quero fazer um pedido', 'Voglio fare un ordine'],
+    ['Teléfono', 'Phone', 'Telefone', 'Telefono'],
+    ['Dirección', 'Address', 'Endereço', 'Indirizzo'],
+    ['Enviar', 'Send', 'Enviar', 'Invia'],
+    ['ENVIAR', 'SEND', 'ENVIAR', 'INVIA'],
+    ['Ej: quiero comer pollo asado', 'E.g. I want to eat roast chicken', 'Ex.: quero comer frango assado', 'Es.: voglio mangiare pollo arrosto'],
+    ['Mensaje para NOVA FLOW IA', 'Message for NOVA FLOW IA', 'Mensagem para a NOVA FLOW IA', 'Messaggio per NOVA FLOW IA'],
+    ['Abrir NOVA FLOW IA', 'Open NOVA FLOW IA', 'Abrir NOVA FLOW IA', 'Apri NOVA FLOW IA'],
+    ['Cerrar asistente', 'Close assistant', 'Fechar assistente', 'Chiudi assistente'],
+    ['Silenciar la voz de Nova', 'Mute Nova’s voice', 'Silenciar a voz da Nova', 'Disattiva la voce di Nova'],
+    ['Activar la voz de Nova', 'Turn on Nova’s voice', 'Ativar a voz da Nova', 'Attiva la voce di Nova'],
+    ['Voz de Nova silenciada.', 'Nova’s voice muted.', 'Voz da Nova silenciada.', 'Voce di Nova disattivata.'],
+    ['Voz de Nova activada.', 'Nova’s voice on.', 'Voz da Nova ativada.', 'Voce di Nova attivata.'],
+    ['Este navegador no dio permiso al micrófono. Escribe tu mensaje.', 'This browser did not allow the microphone. Type your message.', 'Este navegador não permitiu o microfone. Escreva sua mensagem.', 'Questo browser non ha consentito il microfono. Scrivi il tuo messaggio.'],
+    ['No pude escucharte. Intenta de nuevo o escribe.', 'I could not hear you. Try again or type.', 'Não consegui te ouvir. Tente de novo ou escreva.', 'Non ti ho sentito. Riprova o scrivi.'],
+    ['¡Hola! Soy Nova. Dime qué se te antoja, por ejemplo: quiero comer pollo asado, o un hotel por el rato. Te muestro la carta, tomo tu pedido y lo pagas por PSE.',
+      'Hi! I’m Nova. Tell me what you feel like, for example: I want roast chicken, or a hotel by the hour. I show you the menu, take your order and you pay through PSE.',
+      'Olá! Eu sou a Nova. Diga o que você quer, por exemplo: quero frango assado, ou um hotel por hora. Mostro o cardápio, anoto seu pedido e você paga por PSE.',
+      'Ciao! Sono Nova. Dimmi cosa ti va, per esempio: voglio pollo arrosto, oppure un hotel a ore. Ti mostro il menu, prendo il tuo ordine e paghi con PSE.'],
+    ['¡Hola! Soy Nova. ¿Qué se te antoja hoy?', 'Hi! I’m Nova. What do you feel like today?', 'Olá! Eu sou a Nova. O que você quer hoje?', 'Ciao! Sono Nova. Cosa ti va oggi?'],
+    ['Hola, soy Nova. ¿Qué se te antoja hoy?', 'Hi, I’m Nova. What do you feel like today?', 'Olá, eu sou a Nova. O que você quer hoje?', 'Ciao, sono Nova. Cosa ti va oggi?'],
+    ['Hola, soy NOVA FLOW IA. Conozco ', 'Hi, I’m NOVA FLOW IA. I know ', 'Olá, eu sou a NOVA FLOW IA. Conheço ', 'Ciao, sono NOVA FLOW IA. Conosco '],
+    ['Soy NOVA FLOW IA, el asistente humanoide de Nova. Busco restaurantes de Neiva por tipo, y te doy dirección, teléfono, horario y carta cuando están cargados.',
+      'I’m NOVA FLOW IA, Nova’s humanoid assistant. I search Neiva restaurants by type and give you the address, phone, hours and menu when they are loaded.',
+      'Sou a NOVA FLOW IA, a assistente humanoide da Nova. Busco restaurantes de Neiva por tipo e informo endereço, telefone, horário e cardápio quando estão carregados.',
+      'Sono NOVA FLOW IA, l’assistente umanoide di Nova. Cerco ristoranti di Neiva per tipo e ti do indirizzo, telefono, orari e menu quando sono caricati.'],
+    ['¡Bienvenido de nuevo! Sigamos con tu ', 'Welcome back! Let’s continue with your ', 'Bem-vindo de volta! Vamos continuar com seu ', 'Bentornato! Continuiamo con il tuo '],
+    ['Claro, vamos con ', 'Sure, let’s go with ', 'Claro, vamos com ', 'Certo, andiamo con '],
+    ['Perfecto. Ahora necesito tus datos para que el restaurante prepare el pedido.', 'Perfect. Now I need your details so the restaurant can prepare the order.', 'Perfeito. Agora preciso dos seus dados para o restaurante preparar o pedido.', 'Perfetto. Ora mi servono i tuoi dati perché il ristorante prepari l’ordine.'],
+    ['Perfecto. Ahora necesito tus datos para que el restaurante prepare el pedido.', 'Perfect. Now I need your details so the restaurant can prepare the order.', 'Perfeito. Agora preciso dos seus dados para o restaurante preparar o pedido.', 'Perfetto. Ora mi servono i tuoi dati perché il ristorante prepari l’ordine.'],
+    ['Estos restaurantes tienen su carta en Nova. ¿De cuál quieres pedir?', 'These restaurants have their menu on Nova. Which one do you want to order from?', 'Estes restaurantes têm o cardápio na Nova. De qual você quer pedir?', 'Questi ristoranti hanno il menu su Nova. Da quale vuoi ordinare?'],
+    ['Tengo la carta de estos. ¿De cuál quieres pedir?', 'I have the menu for these. Which one do you want to order from?', 'Tenho o cardápio destes. De qual você quer pedir?', 'Ho il menu di questi. Da quale vuoi ordinare?'],
+    ['Estos hoteles tienen tarifas cargadas en Nova. ¿Cuál eliges?', 'These hotels have rates loaded in Nova. Which do you choose?', 'Estes hotéis têm tarifas carregadas na Nova. Qual você escolhe?', 'Questi hotel hanno le tariffe caricate su Nova. Quale scegli?'],
+    ['Elige cómo quieres hospedarte: por hora ("por el rato"), por noche o por día.', 'Choose how you want to stay: by the hour, by the night or by the day.', 'Escolha como quer se hospedar: por hora, por noite ou por dia.', 'Scegli come vuoi soggiornare: a ore, per notte o per giorno.'],
+    ['Elige la fecha y hora de llegada.', 'Choose the arrival date and time.', 'Escolha a data e a hora de chegada.', 'Scegli data e ora di arrivo.'],
+    ['Por hora', 'By the hour', 'Por hora', 'A ore'],
+    ['Por día (pasadía)', 'By the day (day use)', 'Por dia (day use)', 'Per giorno (day use)'],
+    ['Por noche', 'By the night', 'Por noite', 'Per notte'],
+    ['Elige lo que quieres con los botones + y −. ', 'Choose what you want with the + and − buttons. ', 'Escolha o que quer com os botões + e −. ', 'Scegli ciò che vuoi con i pulsanti + e −. '],
+    ['También puedes escribirme, por ejemplo: "un pollo asado con dos gaseosas".', 'You can also write to me, for example: "a roast chicken with two sodas".', 'Você também pode me escrever, por exemplo: "um frango assado com dois refrigerantes".', 'Puoi anche scrivermi, per esempio: "un pollo arrosto con due bibite".'],
+    ['Anotado. Así va tu pedido:', 'Noted. Here is your order so far:', 'Anotado. Assim está seu pedido:', 'Annotato. Ecco il tuo ordine finora:'],
+    ['Anotado: ', 'Noted: ', 'Anotado: ', 'Annotato: '],
+    ['Subtotal: ', 'Subtotal: ', 'Subtotal: ', 'Subtotale: '],
+    ['Continuar', 'Continue', 'Continuar', 'Continua'],
+    ['Revisar pedido', 'Review order', 'Revisar pedido', 'Rivedi ordine'],
+    ['Revisar reserva', 'Review booking', 'Revisar reserva', 'Rivedi prenotazione'],
+    ['Total a pagar', 'Total to pay', 'Total a pagar', 'Totale da pagare'],
+    ['Total: ', 'Total: ', 'Total: ', 'Totale: '],
+    ['Tus datos', 'Your details', 'Seus dados', 'I tuoi dati'],
+    ['Tu nombre', 'Your name', 'Seu nome', 'Il tuo nome'],
+    ['Celular', 'Mobile', 'Celular', 'Cellulare'],
+    ['Domicilio', 'Delivery', 'Entrega', 'Consegna'],
+    ['Recoger en el local', 'Pick up at the venue', 'Retirar no local', 'Ritiro in sede'],
+    ['Dirección de entrega en Neiva', 'Delivery address in Neiva', 'Endereço de entrega em Neiva', 'Indirizzo di consegna a Neiva'],
+    ['Notas (opcional)', 'Notes (optional)', 'Observações (opcional)', 'Note (facoltativo)'],
+    ['Sin bebida', 'No drink', 'Sem bebida', 'Senza bevanda'],
+    ['Dos bebidas', 'Two drinks', 'Duas bebidas', 'Due bevande'],
+    ['Escribe tu nombre.', 'Enter your name.', 'Digite seu nome.', 'Inserisci il tuo nome.'],
+    ['Escribe tu nombre para continuar.', 'Enter your name to continue.', 'Digite seu nome para continuar.', 'Inserisci il tuo nome per continuare.'],
+    ['Escribe la dirección de entrega.', 'Enter the delivery address.', 'Digite o endereço de entrega.', 'Inserisci l’indirizzo di consegna.'],
+    ['Personas: entre 1 y 8.', 'People: between 1 and 8.', 'Pessoas: entre 1 e 8.', 'Persone: da 1 a 8.'],
+    ['Entrega en: ', 'Delivery at: ', 'Entrega em: ', 'Consegna a: '],
+    ['Entregar en: ', 'Deliver to: ', 'Entregar em: ', 'Consegnare a: '],
+    ['Entrega en ', 'Delivery at ', 'Entrega em ', 'Consegna a '],
+    ['El cliente recoge en el local', 'The customer picks up at the venue', 'O cliente retira no local', 'Il cliente ritira in sede'],
+    ['Recoges en el local', 'You pick up at the venue', 'Você retira no local', 'Ritiri in sede'],
+    [' · Recoge en el local', ' · Picks up at the venue', ' · Retira no local', ' · Ritira in sede'],
+    [' · Entrega: ', ' · Delivery: ', ' · Entrega: ', ' · Consegna: '],
+    [' · Llegada: ', ' · Arrival: ', ' · Chegada: ', ' · Arrivo: '],
+    [' · Personas: ', ' · People: ', ' · Pessoas: ', ' · Persone: '],
+    [' · Nota: ', ' · Note: ', ' · Observação: ', ' · Nota: '],
+    [' · Celular ', ' · Mobile ', ' · Celular ', ' · Cellulare '],
+    [' · en curso', ' · in progress', ' · em andamento', ' · in corso'],
+    [' · Pide con Nova', ' · Order with Nova', ' · Peça com a Nova', ' · Ordina con Nova'],
+    ['Pagas ', 'You pay ', 'Você paga ', 'Paghi '],
+    ['Conectando con tu banco (simulado)…', 'Connecting to your bank (simulated)…', 'Conectando ao seu banco (simulado)…', 'Connessione alla tua banca (simulata)…'],
+    ['Pedido tomado', 'Order placed', 'Pedido recebido', 'Ordine preso'],
+    ['! Pagaste ', '! You paid ', '! Você pagou ', '! Hai pagato '],
+    [' (simulación). Ya le avisé a ', ' (simulation). I already notified ', ' (simulação). Já avisei ', ' (simulazione). Ho già avvisato '],
+    [' con el detalle y los valores. Ellos ', ' with the details and amounts. They ', ' com o detalhe e os valores. Eles ', ' con i dettagli e gli importi. Loro '],
+    [' lo preparan y te lo envían', ' prepare it and send it to you', ' preparam e enviam para você', ' lo preparano e te lo inviano'],
+    ['lo preparan y te lo envían', 'prepare it and send it to you', 'preparam e enviam para você', 'lo preparano e te lo inviano'],
+    ['confirman tu reserva', 'confirm your booking', 'confirmam sua reserva', 'confermano la tua prenotazione'],
+    ['. Puedes seguir el estado en Mis pedidos.', '. You can follow the status in My orders.', '. Você pode acompanhar o estado em Meus pedidos.', '. Puoi seguire lo stato in I miei ordini.'],
+    ['. De ese valor Nova descuenta ', '. From that amount Nova deducts ', '. Desse valor a Nova desconta ', '. Da quell’importo Nova trattiene '],
+    [' al negocio y el negocio recibe ', ' to the business and the business receives ', ' ao negócio e o negócio recebe ', ' all’attività e l’attività riceve '],
+    [' por Nova (número ', ' through Nova (number ', ' pela Nova (número ', ' tramite Nova (numero '],
+    ['Número ', 'Number ', 'Número ', 'Numero '],
+    [', pago PSE en modo de prueba).', ', PSE payment in test mode).', ', pagamento PSE em modo de teste).', ', pagamento PSE in modalità di prova).'],
+    ['El pago se hace por PSE a través de Nova. El cliente paga el valor completo; Nova descuenta ', 'Payment is made via PSE through Nova. The customer pays the full amount; Nova deducts ', 'O pagamento é feito por PSE através da Nova. O cliente paga o valor total; a Nova desconta ', 'Il pagamento avviene tramite PSE attraverso Nova. Il cliente paga l’importo intero; Nova trattiene '],
+    [' por pedido y el resto va al negocio. Ahora PSE funciona en modo de prueba: no mueve dinero real.', ' per order and the rest goes to the business. PSE currently runs in test mode: it does not move real money.', ' por pedido e o restante vai para o negócio. Agora o PSE funciona em modo de teste: não movimenta dinheiro real.', ' per ordine e il resto va all’attività. Ora PSE funziona in modalità di prova: non sposta denaro reale.'],
+    ['Listo, cancelé el ', 'Done, I cancelled the ', 'Pronto, cancelei o ', 'Fatto, ho annullato il '],
+    ['proceso de reserva', 'booking process', 'processo de reserva', 'processo di prenotazione'],
+    ['. Cuando quieras empezamos de nuevo.', '. Whenever you like we start again.', '. Quando quiser, começamos de novo.', '. Quando vuoi ricominciamo.'],
+    ['Esta es la carta de ', 'This is the menu of ', 'Este é o cardápio de ', 'Questo è il menu di '],
+    ['Estas son las tarifas de ', 'These are the rates of ', 'Estas são as tarifas de ', 'Queste sono le tariffe di '],
+    ['Este es el perfil de ', 'This is the profile of ', 'Este é o perfil de ', 'Questo è il profilo di '],
+    ['Esto fue lo que encontré para "', 'This is what I found for "', 'Isto foi o que encontrei para "', 'Ecco cosa ho trovato per "'],
+    ['Encontré ', 'I found ', 'Encontrei ', 'Ho trovato '],
+    ['Tengo ', 'I have ', 'Tenho ', 'Ho '],
+    ['restaurantes de Neiva en la base de datos de Nova. Elige un tipo o busca por nombre.', 'restaurants in Neiva in the Nova database. Pick a type or search by name.', 'restaurantes de Neiva na base de dados da Nova. Escolha um tipo ou busque por nome.', 'ristoranti di Neiva nel database di Nova. Scegli un tipo o cerca per nome.'],
+    [' restaurantes de Neiva. Pregúntame por tipo de comida, teléfono o dirección.', ' restaurants in Neiva. Ask me by type of food, phone or address.', ' restaurantes de Neiva. Pergunte por tipo de comida, telefone ou endereço.', ' ristoranti di Neiva. Chiedimi per tipo di cucina, telefono o indirizzo.'],
+    [' en Neiva. Algunos: ', ' in Neiva. Some: ', ' em Neiva. Alguns: ', ' a Neiva. Alcuni: '],
+    [' en Neiva.', ' in Neiva.', ' em Neiva.', ' a Neiva.'],
+    [' en Neiva', ' in Neiva', ' em Neiva', ' a Neiva'],
+    ['No encontré ese negocio en mi base de datos.', 'I did not find that business in my database.', 'Não encontrei esse negócio na minha base de dados.', 'Non ho trovato quell’attività nel mio database.'],
+    ['No encontré eso en mi base de datos. Prueba con un tipo de comida (pizza, comida china, típica huilense), el nombre de un restaurante o pregúntame cómo registrarte.',
+      'I did not find that in my database. Try a type of food (pizza, Chinese food, Huila regional), a restaurant name or ask me how to register.',
+      'Não encontrei isso na minha base de dados. Tente um tipo de comida (pizza, comida chinesa, típica huilense), o nome de um restaurante ou pergunte como se cadastrar.',
+      'Non ho trovato nulla nel mio database. Prova con un tipo di cucina (pizza, cinese, tipica dell’Huila), il nome di un ristorante o chiedimi come registrarti.'],
+    ['No encontramos ese restaurante.', 'We did not find that restaurant.', 'Não encontramos esse restaurante.', 'Non abbiamo trovato quel ristorante.'],
+    ['Restaurante no encontrado', 'Restaurant not found', 'Restaurante não encontrado', 'Ristorante non trovato'],
+    ['Todavía no hay ', 'There is no ', 'Ainda não há ', 'Non c’è ancora '],
+    ['Todavía no tengo cartas cargadas para eso. Dime el nombre del ', 'I do not have menus loaded for that yet. Tell me the name of the ', 'Ainda não tenho cardápios carregados para isso. Diga o nome do ', 'Non ho ancora menu caricati per questo. Dimmi il nome del '],
+    ['Todavía no tengo la dirección de ', 'I do not have the address of ', 'Ainda não tenho o endereço de ', 'Non ho ancora l’indirizzo di '],
+    ['No tengo el teléfono de ', 'I do not have the phone of ', 'Não tenho o telefone de ', 'Non ho il telefono di '],
+    ['Mientras tanto puedes llamar al ', 'Meanwhile you can call ', 'Enquanto isso você pode ligar para ', 'Nel frattempo puoi chiamare il '],
+    ['Mientras tanto puedes probar el flujo completo con el negocio de prueba.', 'Meanwhile you can try the full flow with the test business.', 'Enquanto isso você pode testar o fluxo completo com o negócio de teste.', 'Nel frattempo puoi provare il flusso completo con l’attività di prova.'],
+    ['Si inicias sesión, dejo el aviso a administración para que la carguen.', 'If you sign in, I leave a notice for administration to load it.', 'Se você entrar, deixo um aviso para a administração carregar.', 'Se accedi, lascio un avviso all’amministrazione perché lo carichi.'],
+    ['Ya dejé el aviso a administración para que la carguen.', 'I already left a notice for administration to load it.', 'Já deixei o aviso para a administração carregar.', 'Ho già lasciato l’avviso all’amministrazione perché lo carichi.'],
+    ['Administración aún no cargó el horario de ', 'Administration has not loaded the hours of ', 'A administração ainda não carregou o horário de ', 'L’amministrazione non ha ancora caricato gli orari di '],
+    ['Horario de ', 'Hours of ', 'Horário de ', 'Orari di '],
+    ['Horario: ', 'Hours: ', 'Horário: ', 'Orari: '],
+    ['Carta de ', 'Menu of ', 'Cardápio de ', 'Menu di '],
+    ['la carta', 'the menu', 'o cardápio', 'il menu'],
+    ['las tarifas', 'the rates', 'as tarifas', 'le tariffe'],
+    ['Reserva en ', 'Booking at ', 'Reserva em ', 'Prenotazione a '],
+    ['Pedido para ', 'Order for ', 'Pedido para ', 'Ordine per '],
+    ['Tu restaurante', 'Your restaurant', 'Seu restaurante', 'Il tuo ristorante'],
+    ['Tu solicitud de nuevo restaurante está ', 'Your new restaurant request is ', 'Sua solicitação de novo restaurante está ', 'La tua richiesta di nuovo ristorante è '],
+    ['¿Dónde queda?', 'Where is it?', 'Onde fica?', 'Dov’è?'],
+    ['¿Cuál es el teléfono?', 'What is the phone number?', 'Qual é o telefone?', 'Qual è il telefono?'],
+    ['¿Qué tipo de comida sirven?', 'What kind of food do they serve?', 'Que tipo de comida servem?', 'Che tipo di cucina servono?'],
+    ['¿Tienen horario cargado?', 'Is there a schedule loaded?', 'Há horário carregado?', 'Ci sono orari caricati?'],
+    ['NOVA FLOW IA', 'NOVA FLOW IA', 'NOVA FLOW IA', 'NOVA FLOW IA'],
+    ['Pregúntale a Nova sobre ', 'Ask Nova about ', 'Pergunte à Nova sobre ', 'Chiedi a Nova di '],
+    ['Nova 01 espera una tarea', 'Nova 01 is waiting for a task', 'A Nova 01 espera uma tarefa', 'Nova 01 attende un compito'],
+    ['Nova 01 va hacia ', 'Nova 01 is heading to ', 'A Nova 01 vai para ', 'Nova 01 va verso '],
+    ['Nova 01 llegó a ', 'Nova 01 arrived at ', 'A Nova 01 chegou a ', 'Nova 01 è arrivata a '],
+    ['Nova 01 vuelve a la estación', 'Nova 01 returns to the station', 'A Nova 01 volta à estação', 'Nova 01 torna alla stazione'],
+    ['Nova va en camino', 'Nova is on the way', 'A Nova está a caminho', 'Nova è in arrivo'],
+    ['Estación de carga', 'Charging station', 'Estação de carga', 'Stazione di ricarica'],
+    ['Planta baja', 'Ground floor', 'Térreo', 'Piano terra'],
+    ['Áreas comunes', 'Common areas', 'Áreas comuns', 'Aree comuni'],
+    ['Piso 3', 'Floor 3', 'Andar 3', 'Piano 3'],
+    ['Piso 4', 'Floor 4', 'Andar 4', 'Piano 4'],
+    ['Cocina a Mesa 2', 'Kitchen to Table 2', 'Cozinha para Mesa 2', 'Cucina a Tavolo 2'],
+    ['Barra a Mesa 9', 'Bar to Table 9', 'Bar para Mesa 9', 'Bar a Tavolo 9'],
+    ['Recepción a Hab. ', 'Reception to Room ', 'Recepção para Quarto ', 'Reception a Camera '],
+    ['Servicio nocturno', 'Night service', 'Serviço noturno', 'Servizio notturno'],
+    ['Atiende pedidos de la madrugada con voz suave.', 'Handles late-night orders with a soft voice.', 'Atende pedidos da madrugada com voz suave.', 'Gestisce gli ordini notturni con voce soffusa.'],
+    ['Plano con la posición de Nova', 'Map with Nova’s position', 'Planta com a posição da Nova', 'Mappa con la posizione di Nova'],
+    ['Sector', 'Sector', 'Setor', 'Settore'],
+    ['Sector de la demo', 'Demo sector', 'Setor da demonstração', 'Settore della demo'],
+    ['Cuántas mesas o habitaciones tienes', 'How many tables or rooms you have', 'Quantas mesas ou quartos você tem', 'Quante tavoli o camere hai'],
+    ['Tiempo medio', 'Average time', 'Tempo médio', 'Tempo medio'],
+    ['Navegación', 'Navigation', 'Navegação', 'Navigazione'],
+    ['Principal', 'Main', 'Principal', 'Principale'],
+    ['Secciones de la app', 'App sections', 'Seções do app', 'Sezioni dell’app'],
+    ['App Nova', 'Nova app', 'App Nova', 'App Nova'],
+    ['Nova, inicio', 'Nova, home', 'Nova, início', 'Nova, home'],
+    ['Emblema de Orion Nova Technologies', 'Orion Nova Technologies emblem', 'Emblema da Orion Nova Technologies', 'Emblema di Orion Nova Technologies'],
+    ['Logo de Orion Nova Technologies', 'Orion Nova Technologies logo', 'Logo da Orion Nova Technologies', 'Logo di Orion Nova Technologies'],
+    ['Quitar ', 'Remove ', 'Remover ', 'Rimuovi '],
+    ['Agregar ', 'Add ', 'Adicionar ', 'Aggiungi '],
+    ['Abrir ', 'Open ', 'Abrir ', 'Apri '],
+    ['Nuevo ', 'New ', 'Novo ', 'Nuovo '],
+    ['Desde ', 'From ', 'A partir de ', 'Da '],
+    ['Gracias, ', 'Thanks, ', 'Obrigado, ', 'Grazie, '],
+    /* ---- categorías ---- */
+    ['Típica huilense y colombiana', 'Huila and Colombian regional', 'Típica huilense e colombiana', 'Tipica dell’Huila e colombiana'],
+    ['Pollo y asadero', 'Chicken and grill', 'Frango e churrascaria', 'Pollo e rosticceria'],
+    ['Parrilla y carnes', 'Grill and meats', 'Churrasco e carnes', 'Griglia e carni'],
+    ['Comida china', 'Chinese food', 'Comida chinesa', 'Cucina cinese'],
+    ['Pizza e italiana', 'Pizza and Italian', 'Pizza e italiana', 'Pizza e cucina italiana'],
+    ['Mariscos y cevichería', 'Seafood and ceviche', 'Frutos do mar e cevicheria', 'Frutti di mare e ceviche'],
+    ['Comida rápida', 'Fast food', 'Comida rápida', 'Fast food'],
+    ['Café y panadería', 'Coffee and bakery', 'Café e padaria', 'Caffè e panetteria'],
+    ['Internacional y de autor', 'International and signature', 'Internacional e de autor', 'Internazionale e d’autore'],
+    ['Bar y gastrobar', 'Bar and gastropub', 'Bar e gastrobar', 'Bar e gastropub'],
+    ['Peruana', 'Peruvian', 'Peruana', 'Peruviana'],
+    ['Japonesa y sushi', 'Japanese and sushi', 'Japonesa e sushi', 'Giapponese e sushi'],
+    ['Mexicana', 'Mexican', 'Mexicana', 'Messicana'],
+    ['Vegetariana y saludable', 'Vegetarian and healthy', 'Vegetariana e saudável', 'Vegetariana e salutare'],
+    ['Hotel y hospedaje', 'Hotel and lodging', 'Hotel e hospedagem', 'Hotel e alloggio'],
+    ['Otros', 'Others', 'Outros', 'Altri'],
+    ['pizza e italiana', 'pizza and Italian', 'pizza e italiana', 'pizza e cucina italiana'],
+    ['típica huilense y colombiana', 'Huila and Colombian regional', 'típica huilense e colombiana', 'tipica dell’Huila e colombiana'],
+    ['pollo y asadero', 'chicken and grill', 'frango e churrascaria', 'pollo e rosticceria'],
+    ['parrilla y carnes', 'grill and meats', 'churrasco e carnes', 'griglia e carni'],
+    ['comida china', 'Chinese food', 'comida chinesa', 'cucina cinese'],
+    ['mariscos y cevichería', 'seafood and ceviche', 'frutos do mar e cevicheria', 'frutti di mare e ceviche'],
+    ['comida rápida', 'fast food', 'comida rápida', 'fast food'],
+    ['café y panadería', 'coffee and bakery', 'café e padaria', 'caffè e panetteria'],
+    ['internacional y de autor', 'international and signature', 'internacional e de autor', 'internazionale e d’autore'],
+    ['bar y gastrobar', 'bar and gastropub', 'bar e gastrobar', 'bar e gastropub'],
+    ['japonesa y sushi', 'Japanese and sushi', 'japonesa e sushi', 'giapponese e sushi'],
+    ['vegetariana y saludable', 'vegetarian and healthy', 'vegetariana e saudável', 'vegetariana e salutare'],
+    ['hotel y hospedaje', 'hotel and lodging', 'hotel e hospedagem', 'hotel e alloggio'],
+    ['Encontré ', 'I found ', 'Encontrei ', 'Ho trovato '],
+    [' restaurantes de ', ' restaurants of type ', ' restaurantes de ', ' ristoranti di tipo '],
+    [' queda en ', ' is at ', ' fica em ', ' si trova in '],
+    [' en mi base de datos.', ' in my database.', ' na minha base de dados.', ' nel mio database.'],
+    [' dentro de Nova. No es el sitio oficial del restaurante.', ' inside Nova. It is not the restaurant’s official site.', ' dentro da Nova. Não é o site oficial do restaurante.', ' dentro Nova. Non è il sito ufficiale del ristorante.'],
+    ['Este es el perfil de ', 'This is the profile of ', 'Este é o perfil de ', 'Questo è il profilo di '],
+    ['Ya marqué lo que me pediste; ajusta las cantidades si quieres.', 'I already marked what you asked for; adjust the quantities if you like.', 'Já marquei o que você pediu; ajuste as quantidades se quiser.', 'Ho già segnato ciò che hai chiesto; regola le quantità se vuoi.'],
+    ['Probar con ', 'Try with ', 'Testar com ', 'Prova con '],
+    ['Probar el registro de un restaurante', 'Try registering a restaurant', 'Testar o cadastro de um restaurante', 'Prova la registrazione di un ristorante'],
+    [' y le aviso a administración para que cargue su carta.', ' and I notify administration to load its menu.', ' e aviso a administração para carregar o cardápio.', ' e avviso l’amministrazione perché carichi il menu.'],
+    [' y le aviso a administración para que cargue su tarifa.', ' and I notify administration to load its rate.', ' e aviso a administração para carregar a tarifa.', ' e avviso l’amministrazione perché carichi la tariffa.'],
+    ['Todavía no tienes pedidos. Pídele a Nova algo de comer o un hotel.', 'You have no orders yet. Ask Nova for something to eat or a hotel.', 'Você ainda não tem pedidos. Peça à Nova algo para comer ou um hotel.', 'Non hai ancora ordini. Chiedi a Nova qualcosa da mangiare o un hotel.'],
+    ['Se muestran 40 como máximo. Busca por nombre para encontrar otros.', 'Up to 40 are shown. Search by name to find others.', 'No máximo 40 são exibidos. Busque por nome para encontrar outros.', 'Ne vengono mostrati al massimo 40. Cerca per nome per trovare gli altri.'],
+    ['Pregúntale a Nova sobre ', 'Ask Nova about ', 'Pergunte à Nova sobre ', 'Chiedi a Nova di '],
+    ['Quitar ', 'Remove ', 'Remover ', 'Rimuovi '],
+    ['Agregar ', 'Add ', 'Adicionar ', 'Aggiungi '],
+    ['Agregar restaurante', 'Add restaurant', 'Adicionar restaurante', 'Aggiungi ristorante'],
+    ['Mesa ', 'Table ', 'Mesa ', 'Tavolo '],
+    ['Mesa 1–40', 'Tables 1–40', 'Mesas 1–40', 'Tavoli 1–40'],
+    ['Mesa 5 a Lavado', 'Table 5 to Washing', 'Mesa 5 para Lavagem', 'Tavolo 5 a Lavaggio'],
+    ['Salón principal', 'Main hall', 'Salão principal', 'Sala principale'],
+    ['Salón', 'Dining room', 'Salão', 'Sala'],
+    ['Terraza', 'Terrace', 'Terraço', 'Terrazza'],
+    ['Barra', 'Bar', 'Balcão', 'Bancone'],
+    ['Cocina', 'Kitchen', 'Cozinha', 'Cucina'],
+    ['Lobby', 'Lobby', 'Lobby', 'Lobby'],
+    ['PASO 1', 'STEP 1', 'PASSO 1', 'PASSO 1'], ['PASO 2', 'STEP 2', 'PASSO 2', 'PASSO 2'], ['PASO 3', 'STEP 3', 'PASSO 3', 'PASSO 3'],
+    ['HISTORIAL', 'HISTORY', 'HISTÓRICO', 'CRONOLOGIA'],
+    ['Dónde trabaja Nova', 'Where Nova works', 'Onde a Nova trabalha', 'Dove lavora Nova'],
+    ['Llevar platos a la mesa', 'Carry plates to the table', 'Levar pratos até a mesa', 'Portare i piatti al tavolo'],
+    ['El encargado ve dónde está Nova, le asigna destinos y revisa lo que ya entregó. La demo de la derecha funciona: cambia de sector, envía a Nova a un destino y mira el mapa.', 'The manager sees where Nova is, assigns destinations and reviews what it has already delivered. The demo on the right works: switch sector, send Nova to a destination and watch the map.', 'O responsável vê onde a Nova está, atribui destinos e revisa o que já foi entregue. A demonstração à direita funciona: mude de setor, envie a Nova a um destino e veja o mapa.', 'Il responsabile vede dov’è Nova, assegna le destinazioni e controlla ciò che ha già consegnato. La demo a destra funziona: cambia settore, invia Nova a una destinazione e guarda la mappa.'],
+    ['Nova toma tareas de la cola, esquiva obstáculos, vuelve a cargar sola y deja el registro en el historial.', 'Nova takes tasks from the queue, avoids obstacles, recharges on its own and logs everything in the history.', 'A Nova pega tarefas da fila, desvia de obstáculos, volta a carregar sozinha e deixa o registro no histórico.', 'Nova prende i compiti dalla coda, evita gli ostacoli, si ricarica da sola e registra tutto nella cronologia.'],
+    ['Ilustración de Nova, el humanoide de servicio, con una bandeja en la mano', 'Illustration of Nova, the service humanoid, holding a tray', 'Ilustração da Nova, o humanoide de serviço, com uma bandeja na mão', 'Illustrazione di Nova, l’umanoide di servizio, con un vassoio in mano'],
+    ['Nova, el asistente humanoide', 'Nova, the humanoid assistant', 'Nova, a assistente humanoide', 'Nova, l’assistente umanoide'],
+    ['Roles verificados por la plataforma', 'Roles verified by the platform', 'Papéis verificados pela plataforma', 'Ruoli verificati dalla piattaforma'],
+    ['Base de datos conectada', 'Database connected', 'Banco de dados conectado', 'Database connesso'],
+    ['Cifrado de contraseñas activo', 'Password hashing active', 'Criptografia de senhas ativa', 'Cifratura delle password attiva'],
+    ['Contraseña aceptada.', 'Password accepted.', 'Senha aceita.', 'Password accettata.'],
+    ['La cuenta de administración la asigna Nova directamente.', 'The administration account is assigned directly by Nova.', 'A conta de administração é atribuída diretamente pela Nova.', 'L’account di amministrazione viene assegnato direttamente da Nova.'],
+    ['Estas cifras son un registro de prueba. Los pagos reales y las transferencias a tu cuenta bancaria y a los negocios requieren una pasarela de pagos autorizada; Nova no guarda números de cuenta.', 'These figures are a test record. Real payments and transfers to your bank account and to businesses require an authorized payment gateway; Nova does not store account numbers.', 'Estes números são um registro de teste. Pagamentos reais e transferências para sua conta bancária e para os negócios exigem um gateway de pagamento autorizado; a Nova não guarda números de conta.', 'Queste cifre sono un registro di prova. I pagamenti reali e i trasferimenti al tuo conto e alle attività richiedono un gateway di pagamento autorizzato; Nova non salva numeri di conto.'],
+    ['Enseñarle algo a NOVA FLOW IA', 'Teach NOVA FLOW IA something', 'Ensinar algo à NOVA FLOW IA', 'Insegna qualcosa a NOVA FLOW IA'],
+    ['Aún no hay conocimiento adicional. Nova responde con la información de los restaurantes.', 'There is no additional knowledge yet. Nova answers with the restaurants’ information.', 'Ainda não há conhecimento adicional. A Nova responde com as informações dos restaurantes.', 'Non c’è ancora conoscenza aggiuntiva. Nova risponde con le informazioni dei ristoranti.'],
+    ['Pregunta frecuente', 'Frequently asked question', 'Pergunta frequente', 'Domanda frequente'],
+    ['Respuesta', 'Answer', 'Resposta', 'Risposta'],
+    ['Guardar', 'Save', 'Salvar', 'Salva'],
+    ['Estado', 'Status', 'Estado', 'Stato'], ['Evento', 'Event', 'Evento', 'Evento'], ['Fecha', 'Date', 'Data', 'Data'], ['Fuente', 'Source', 'Fonte', 'Fonte'], ['Hora', 'Time', 'Hora', 'Ora'],
+    ['Eventos registrados', 'Recorded events', 'Eventos registrados', 'Eventi registrati'],
+    ['Ingresos fallidos', 'Failed sign-ins', 'Acessos falhos', 'Accessi falliti'],
+    ['Intentos / bloqueo', 'Attempts / lockout', 'Tentativas / bloqueio', 'Tentativi / blocco'],
+    ['Personas con actividad', 'People with activity', 'Pessoas com atividade', 'Persone con attività'],
+    ['Persona', 'Person', 'Pessoa', 'Persona'],
+    ['Pesos descontados al negocio por cada pedido', 'Pesos deducted from the business per order', 'Pesos descontados do negócio por cada pedido', 'Pesos trattenuti all’attività per ogni ordine'],
+    ['Por entregar a negocios', 'To be paid to businesses', 'A repassar aos negócios', 'Da versare alle attività'],
+    ['Total cobrado a clientes', 'Total charged to customers', 'Total cobrado dos clientes', 'Totale addebitato ai clienti'],
+    ['Comisión Nova acumulada', 'Accumulated Nova fee', 'Comissão Nova acumulada', 'Commissione Nova accumulata'],
+    ['Comisión por pedido', 'Fee per order', 'Comissão por pedido', 'Commissione per ordine'],
+    ['Comisión', 'Fee', 'Comissão', 'Commissione'],
+    ['Cobrado', 'Charged', 'Cobrado', 'Addebitato'], ['Detalle', 'Details', 'Detalhe', 'Dettaglio'], ['Negocio', 'Business', 'Negócio', 'Attività'], ['Total', 'Total', 'Total', 'Totale'], ['Tipo', 'Type', 'Tipo', 'Tipo'], ['Todos', 'All', 'Todos', 'Tutti'],
+    ['Continuo', 'Continuous', 'Contínuo', 'Continuo'],
+    ['Carga', 'Charge', 'Carga', 'Carica'],
+    ['Tipos de restaurante', 'Restaurant types', 'Tipos de restaurante', 'Tipi di ristorante'],
+    ['Restaurantes públicos', 'Public restaurants', 'Restaurantes públicos', 'Ristoranti pubblici'],
+    ['Restaurantes registrados', 'Registered restaurants', 'Restaurantes cadastrados', 'Ristoranti registrati'],
+    ['Solicitudes pendientes', 'Pending requests', 'Solicitações pendentes', 'Richieste in sospeso'],
+    ['1 Cuenta', '1 Account', '1 Conta', '1 Account'], ['2 Tipo', '2 Type', '2 Tipo', '2 Tipo'], ['3 Restaurante', '3 Restaurant', '3 Restaurante', '3 Ristorante'],
+    ['¿Qué tipo de negocio vas a registrar?', 'What type of business will you register?', 'Que tipo de negócio você vai cadastrar?', 'Che tipo di attività vuoi registrare?'],
+    ['Hotel', 'Hotel', 'Hotel', 'Hotel'],
+    ['Restaurante', 'Restaurant', 'Restaurante', 'Ristorante'],
+    ['administración', 'administration', 'administração', 'amministrazione'], ['cliente', 'customer', 'cliente', 'cliente'], ['restaurante', 'restaurant', 'restaurante', 'ristorante'],
+    ['aprobado', 'approved', 'aprovado', 'approvato'],
+    ['encolombia.com y Tripadvisor', 'encolombia.com and Tripadvisor', 'encolombia.com e Tripadvisor', 'encolombia.com e Tripadvisor'],
+    ['Listado de Tripadvisor', 'Tripadvisor listing', 'Listagem do Tripadvisor', 'Elenco di Tripadvisor'],
+    ['Idioma / Language', 'Idioma / Language', 'Idioma / Language', 'Idioma / Language'],
+    /* ---- cartas de ejemplo (negocio de prueba) ---- */
+    ['Pollo asado', 'Roast chicken', 'Frango assado', 'Pollo arrosto'],
+    ['Medio pollo asado', 'Half roast chicken', 'Meio frango assado', 'Mezzo pollo arrosto'],
+    ['Cuarto de pollo asado', 'Quarter roast chicken', 'Quarto de frango assado', 'Quarto di pollo arrosto'],
+    ['Porción de papa criolla', 'Side of criolla potatoes', 'Porção de batata crioula', 'Porzione di patate creole'],
+    ['Entero, con papa criolla y ensalada', 'Whole, with criolla potatoes and salad', 'Inteiro, com batata crioula e salada', 'Intero, con patate creole e insalata'],
+    ['Con papa criolla', 'With criolla potatoes', 'Com batata crioula', 'Con patate creole'],
+    ['Arepa', 'Arepa', 'Arepa', 'Arepa'], ['Unidad', 'Unit', 'Unidade', 'Unità'],
+    ['Gaseosa 400 ml', 'Soda 400 ml', 'Refrigerante 400 ml', 'Bibita 400 ml'],
+    ['Cola, naranja o limón', 'Cola, orange or lemon', 'Cola, laranja ou limão', 'Cola, arancia o limone'],
+    ['Jugo natural', 'Fresh juice', 'Suco natural', 'Succo naturale'],
+    ['Del día', 'Of the day', 'Do dia', 'Del giorno'],
+    ['Agua', 'Water', 'Água', 'Acqua'],
+    ['Botella 600 ml', '600 ml bottle', 'Garrafa 600 ml', 'Bottiglia 600 ml'],
+    ['Pizza Margarita', 'Margherita pizza', 'Pizza Margherita', 'Pizza Margherita'],
+    ['Para compartir', 'To share', 'Para compartilhar', 'Da condividere'],
+    ['Acompañamientos', 'Sides', 'Acompanhamentos', 'Contorni'],
+    ['Bebidas', 'Drinks', 'Bebidas', 'Bevande'],
+    ['Entrada', 'Starter', 'Entrada', 'Antipasto'], ['Comida', 'Food', 'Comida', 'Cibo'],
+    ['Habitación sencilla', 'Single room', 'Quarto simples', 'Camera singola'],
+    ['Habitación doble', 'Double room', 'Quarto duplo', 'Camera doppia'],
+    ['Suite', 'Suite', 'Suíte', 'Suite']
+  ];
+  var M = { en: {}, pt: {}, it: {} }, KEYS = [], REV = {};
+  D.forEach(function (r) {
+    ['en', 'pt', 'it'].forEach(function (l, i) { if (M[l][r[0]] === undefined) M[l][r[0]] = r[i + 1]; });
+    if (KEYS.indexOf(r[0]) < 0) KEYS.push(r[0]);
+    ['en', 'pt', 'it'].forEach(function (l, i) { var k = r[i + 1].trim(); if (REV[k] === undefined && k !== r[0].trim()) REV[k] = r[0]; });
+  });
+  /* fragmentos: se reemplazan en cualquier parte del texto (frases largas o con puntuación en el borde);
+     prefijos: terminan en espacio o dos puntos y traducen también lo que sigue; el resto, solo texto exacto */
+  function isFrag(k) { var t = k.trim(); return k.length >= 30 || (/^[a-záéíóúñ]/.test(k) && t.length >= 8) || /^[\s.,;:·!)(]/.test(k) || /[.!?…]$/.test(t) && t.length >= 12; }
+  var FRAG = [], PRE = [];
+  KEYS.forEach(function (k) { if (k.length < 30 && /[ :]$/.test(k) && k.trim().length >= 3 && !/^[\s.,;·]/.test(k)) PRE.push(k); else if (isFrag(k)) FRAG.push(k); });
+  FRAG.sort(function (a, b) { return b.length - a.length; }); PRE.sort(function (a, b) { return b.length - a.length; });
+  function tr(s, lang, depth) {
+    lang = lang || cur; if (lang === 'es' || !s) return s;
+    var m = M[lang], t = String(s), tt = t.trim(); if (!tt) return s;
+    var lead = t.slice(0, t.indexOf(tt)), trail = t.slice(t.indexOf(tt) + tt.length);
+    if (m[tt] !== undefined) return lead + m[tt] + trail;
+    depth = depth || 0;
+    if (tt.indexOf(' · ') > 0 && depth < 2) return lead + tt.split(' · ').map(function (x) { return tr(x, lang, depth + 1); }).join(' · ') + trail;
+    var out = t, i, k;
+    for (i = 0; i < PRE.length; i++) { k = PRE[i]; if (out.indexOf(k) === 0 && out.length > k.length && depth < 3) { return m[k] + tr(out.slice(k.length), lang, depth + 1); } }
+    for (i = 0; i < FRAG.length; i++) { k = FRAG[i]; if (out.indexOf(k) >= 0) out = out.split(k).join(m[k]); }
+    return out;
+  }
+  /* de lo que el usuario ve (traducido) a español, para que el entendimiento del chat siga funcionando */
+  var LEX = {
+    en: [[/\b(i want|i would like|i'd like)\b/g, 'quiero'], [/\bwith\b/g, 'con'], [/\b(a|an|one)\b/g, 'un'], [/\bhotel by the hour\b/g, 'hotel por el rato'], [/\broast chicken\b/g, 'pollo asado'], [/\bchicken\b/g, 'pollo'], [/\bhamburger\b/g, 'hamburguesa'], [/\bpizza\b/g, 'pizza'], [/\blunch\b/g, 'almuerzo'], [/\border\b/g, 'pedido'], [/\bmenu\b/g, 'carta'], [/\bphone\b/g, 'telefono'], [/\baddress\b/g, 'direccion'], [/\bwhere is it\b/g, 'donde queda'], [/\bhow does payment work\b/g, 'como funciona el pago'], [/\bpay(ment)?\b/g, 'pago'], [/\bcancel\b/g, 'cancelar'], [/\bsoda(s)?\b/g, 'gaseosa'], [/\btwo\b/g, 'dos'], [/\band\b/g, 'con']],
+    pt: [[/\b(eu )?quero\b/g, 'quiero'], [/\b(um|uma)\b/g, 'un'], [/\bhotel por hora\b/g, 'hotel por el rato'], [/\bfrango assado\b/g, 'pollo asado'], [/\bfrango\b/g, 'pollo'], [/\bhamb[uú]rguer\b/g, 'hamburguesa'], [/\balmo[cç]o\b/g, 'almuerzo'], [/\bpedido\b/g, 'pedido'], [/\bcard[aá]pio\b/g, 'carta'], [/\btelefone\b/g, 'telefono'], [/\bendere[cç]o\b/g, 'direccion'], [/\bonde fica\b/g, 'donde queda'], [/\bpagamento\b/g, 'pago'], [/\bpagar\b/g, 'pagar'], [/\bcancelar\b/g, 'cancelar'], [/\brefrigerantes?\b/g, 'gaseosa'], [/\bdois\b/g, 'dos'], [/\b(com|e)\b/g, 'con']],
+    it: [[/\bvoglio\b/g, 'quiero'], [/\bhotel a ore\b/g, 'hotel por el rato'], [/\bpollo arrosto\b/g, 'pollo asado'], [/\bpollo\b/g, 'pollo'], [/\bhamburger\b/g, 'hamburguesa'], [/\bpranzo\b/g, 'almuerzo'], [/\bordine\b/g, 'pedido'], [/\bmenu\b/g, 'carta'], [/\btelefono\b/g, 'telefono'], [/\bindirizzo\b/g, 'direccion'], [/\bdov['’]è\b/g, 'donde queda'], [/\bpagamento\b/g, 'pago'], [/\bpagare\b/g, 'pagar'], [/\bannulla(re)?\b/g, 'cancelar'], [/\bbevande?\b/g, 'gaseosa'], [/\bdue\b/g, 'dos'], [/\b(con|e)\b/g, 'con']]
+  };
+  function es(text) {
+    if (cur === 'es') return text;
+    var t = String(text).trim(); if (REV[t] !== undefined) return REV[t];
+    var o = t.toLowerCase(); (LEX[cur] || []).forEach(function (p) { o = o.replace(p[0], p[1]); });
+    return o;
+  }
+  /* ---- DOM ---- */
+  var ATTRS = ['placeholder', 'title', 'aria-label', 'alt'];
+  var busy = false, mo = null;
+  function skipEl(e) { return !e || !e.closest || e.closest('script,style,textarea,.bub.me,[data-notr],#langBar'); }
+  function doText(n) {
+    var p = n.parentNode; if (skipEl(p)) return;
+    var v = n.nodeValue;
+    if (n.__tr !== undefined && v === n.__tr) { var o1 = tr(n.__es); if (o1 !== v) n.nodeValue = o1; n.__tr = o1; return; }
+    n.__es = v; var o = tr(v); n.__tr = o; if (o !== v) n.nodeValue = o;
+  }
+  function doAttrs(e) {
+    if (skipEl(e)) return;
+    ATTRS.forEach(function (a) {
+      var v = e.getAttribute(a); if (v === null) return;
+      var k = '__es_' + a, kt = '__tr_' + a;
+      if (e[kt] !== undefined && v === e[kt]) { var o2 = tr(e[k]); if (o2 !== v) e.setAttribute(a, o2); e[kt] = o2; return; }
+      e[k] = v; var o = tr(v); e[kt] = o; if (o !== v) e.setAttribute(a, o);
+    });
+  }
+  function walk(root) {
+    if (!root) return;
+    if (root.nodeType === 3) return doText(root);
+    if (root.nodeType !== 1) return;
+    if (skipEl(root)) return;
+    doAttrs(root);
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, null), n;
+    while ((n = w.nextNode())) { if (n.nodeType === 3) doText(n); else doAttrs(n); }
+  }
+  function run(fn) { busy = true; try { fn(); } finally { busy = false; if (mo) mo.takeRecords(); } }
+  function start() {
+    if (mo) return;
+    mo = new MutationObserver(function (list) {
+      if (busy || cur === 'es') return;
+      run(function () {
+        list.forEach(function (m) {
+          if (m.type === 'childList') m.addedNodes.forEach(walk);
+          else if (m.type === 'characterData') doText(m.target);
+          else if (m.type === 'attributes') doAttrs(m.target);
+        });
+      });
+    });
+    mo.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+  }
+  function apply() { run(function () { walk(document.body); document.title = cur === 'es' ? (document.title.__es || document.title) : document.title; }); }
+  function set(l) {
+    if (LANGS.indexOf(l) < 0) return;
+    cur = l; try { localStorage.setItem('nova.lang', l); } catch (e) { /* ok */ }
+    document.documentElement.lang = l;
+    $$('#langBar button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === l)); });
+    apply();
+    try { if (typeof stopSpeech === 'function') stopSpeech(); if (typeof loadVoices === 'function') loadVoices(); if (typeof renderChatHead === 'function') renderChatHead(); } catch (e) { /* ok */ }
+  }
+  function bar() {
+    var host = document.querySelector('header.top > .wrap'); if (!host || document.getElementById('langBar')) return;
+    var d = document.createElement('div'); d.id = 'langBar'; d.className = 'langbar'; d.setAttribute('role', 'group'); d.setAttribute('aria-label', 'Idioma / Language');
+    LANGS.forEach(function (l) {
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('data-lang', l); b.textContent = l.toUpperCase(); b.title = NAMES[l]; b.setAttribute('aria-label', NAMES[l]); b.setAttribute('aria-pressed', String(l === cur));
+      b.addEventListener('click', function () { set(l); }); d.appendChild(b);
+    });
+    host.appendChild(d);
+  }
+  bar(); start(); if (cur !== 'es') { document.documentElement.lang = cur; apply(); }
+  return { tr: tr, es: es, set: set, get: function () { return cur; }, loc: function () { return LOC[cur]; } };
+})();
+
 /* ============ pedidos, liquidación y cartas ============ */
 var ST_FOOD = ['nuevo', 'aceptado', 'preparando', 'en-camino', 'entregado'];
 var ST_HOTEL = ['nuevo', 'confirmada', 'hospedado', 'finalizada'];
@@ -2125,14 +2832,14 @@ function editMenu(id) {
 var VOICE = { on: true, token: 0, voices: [] };
 try { VOICE.on = localStorage.getItem('nova.voice') !== 'off'; } catch (e) { /* ok */ }
 function hasTTS() { return !!(window.speechSynthesis && window.SpeechSynthesisUtterance); }
-function loadVoices() { try { VOICE.voices = (speechSynthesis.getVoices() || []).filter(function (v) { return /^es/i.test(v.lang); }); } catch (e) { VOICE.voices = []; } }
+function loadVoices() { try { VOICE.voices = (speechSynthesis.getVoices() || []).filter(function (v) { return new RegExp('^' + I18N.get(), 'i').test(v.lang); }); } catch (e) { VOICE.voices = []; } }
 if (hasTTS()) { loadVoices(); try { speechSynthesis.addEventListener('voiceschanged', loadVoices); } catch (e) { /* ok */ } }
 function canSpeak() { return VOICE.on && hasTTS() && VOICE.voices.length > 0; }
 function pickVoice() {
   var best = null, bs = -1;
   VOICE.voices.forEach(function (v) {
     var s = 0, l = v.lang.replace('_', '-').toLowerCase();
-    s += l === 'es-co' ? 50 : l === 'es-mx' ? 40 : l === 'es-us' ? 36 : l === 'es-419' ? 34 : l.indexOf('es-') === 0 ? 20 : 0;
+    s += I18N.get() !== 'es' ? (l === I18N.loc().toLowerCase() ? 50 : 20) : l === 'es-co' ? 50 : l === 'es-mx' ? 40 : l === 'es-us' ? 36 : l === 'es-419' ? 34 : l.indexOf('es-') === 0 ? 20 : 0;
     if (/natural|neural|online|google|sabina|dalia|paola|salome|helena|monica|laura|female|mujer/i.test(v.name)) s += 25;
     if (/male|jorge|pablo|raul|diego|juan/i.test(v.name) && !/female/i.test(v.name)) s -= 15;
     if (s > bs) { bs = s; best = v; }
@@ -2152,19 +2859,21 @@ function n2w(n) {
   return o.join(' ');
 }
 function speakable(t) {
+  if (I18N.get() !== 'es') return String(t).replace(/\$\s?([\d.]+)/g, function (m, d) { return d.replace(/\./g, '') + ' pesos'; }).replace(/×/g, ' x ').replace(/[•·→←]/g, ',').replace(/\s*\n+\s*/g, '. ').replace(/\s+/g, ' ').trim();
   return String(t).replace(/\$\s?([\d.]+)/g, function (m, d) { var n = parseInt(d.replace(/\./g, ''), 10); return isFinite(n) && n < 1e9 ? n2w(n) + ' pesos' : m; })
     .replace(/×/g, ' por ').replace(/[•·→←]/g, ',').replace(/\s*\n+\s*/g, '. ').replace(/\(8\)\s?/g, '').replace(/\s+/g, ' ').trim();
 }
 function stopSpeech() { VOICE.token++; try { if (hasTTS()) speechSynthesis.cancel(); } catch (e) { /* ok */ } avSet('talk', false); }
 function speak(text) {
   if (!canSpeak()) return Promise.resolve();
+  text = I18N.tr(text);
   var tok = ++VOICE.token, parts = speakable(text).match(/[^.!?¿]+[.!?]?/g) || [], v = pickVoice(), i = 0;
   try { speechSynthesis.cancel(); } catch (e) { /* ok */ }
   return new Promise(function (res) {
     function next() {
       if (tok !== VOICE.token || i >= parts.length) { if (tok === VOICE.token) avSet('talk', false); return res(); }
       var s = parts[i++].trim(); if (s.length < 2) return next();
-      var u = new SpeechSynthesisUtterance(s); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'es-CO';
+      var u = new SpeechSynthesisUtterance(s); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = I18N.loc();
       u.rate = 1.02; u.pitch = 1.08; u.volume = 1;
       var started = false, guard = setTimeout(function () { if (!started) { stopSpeech(); res(); } }, 2500);
       u.onstart = function () { started = true; clearTimeout(guard); avSet('talk', true); };
@@ -2196,7 +2905,7 @@ if ($('#micBtn')) {
   if (!SR) $('#micBtn').hidden = true;
   else $('#micBtn').addEventListener('click', function () {
     if (recog) { try { recog.stop(); } catch (e) { /* ok */ } return; }
-    stopSpeech(); recog = new SR(); recog.lang = 'es-CO'; recog.interimResults = false; recog.maxAlternatives = 1;
+    stopSpeech(); recog = new SR(); recog.lang = I18N.loc(); recog.interimResults = false; recog.maxAlternatives = 1;
     recog.onstart = function () { avSet('listen', true); $('#micBtn').setAttribute('aria-pressed', 'true'); };
     recog.onresult = function (e) { var t = e.results && e.results[0] && e.results[0][0] && e.results[0][0].transcript; if (t) sendChat(t); };
     recog.onerror = function (e) { toast(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? 'Este navegador no dio permiso al micrófono. Escribe tu mensaje.' : 'No pude escucharte. Intenta de nuevo o escribe.'); };
@@ -2351,7 +3060,7 @@ function addMsg(who, text, acts, cls) {
   scrollC(); return b;
 }
 async function novaSay(text, acts, state) {
-  text = plain(text); var b = addMsg('nova', '');
+  text = I18N.tr(plain(text)); var b = addMsg('nova', ''); b.setAttribute('data-notr', '1');
   var speaking = canSpeak(); speak(text);
   if (!speaking) avSet('talk', true);
   if (reduceMo || text.length > 400) b.textContent = text;
@@ -2676,7 +3385,7 @@ async function answerQA(text) {
 }
 async function sendChat(text) {
   text = clip(text, 200).trim(); if (!text || S.chat.busy) return;
-  stopSpeech(); S.chat.busy = true; addMsg('me', text);
+  stopSpeech(); S.chat.busy = true; addMsg('me', I18N.tr(text)); text = I18N.es(text);
   try {
     var n = norm(text), f = S.flow;
     if (f && !f.done && /^(cancelar|cancela|salir|ya no|olvidalo)/.test(n)) { f.done = true; $$('.mcard').forEach(freeze); await novaSay('Listo, cancelé el ' + (f.kind === 'hotel' ? 'proceso de reserva' : 'pedido') + '. Cuando quieras empezamos de nuevo.'); return; }

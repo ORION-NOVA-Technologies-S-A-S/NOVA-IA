@@ -2,14 +2,14 @@
 var VOICE = { on: true, token: 0, voices: [] };
 try { VOICE.on = localStorage.getItem('nova.voice') !== 'off'; } catch (e) { /* ok */ }
 function hasTTS() { return !!(window.speechSynthesis && window.SpeechSynthesisUtterance); }
-function loadVoices() { try { VOICE.voices = (speechSynthesis.getVoices() || []).filter(function (v) { return /^es/i.test(v.lang); }); } catch (e) { VOICE.voices = []; } }
+function loadVoices() { try { VOICE.voices = (speechSynthesis.getVoices() || []).filter(function (v) { return new RegExp('^' + I18N.get(), 'i').test(v.lang); }); } catch (e) { VOICE.voices = []; } }
 if (hasTTS()) { loadVoices(); try { speechSynthesis.addEventListener('voiceschanged', loadVoices); } catch (e) { /* ok */ } }
 function canSpeak() { return VOICE.on && hasTTS() && VOICE.voices.length > 0; }
 function pickVoice() {
   var best = null, bs = -1;
   VOICE.voices.forEach(function (v) {
     var s = 0, l = v.lang.replace('_', '-').toLowerCase();
-    s += l === 'es-co' ? 50 : l === 'es-mx' ? 40 : l === 'es-us' ? 36 : l === 'es-419' ? 34 : l.indexOf('es-') === 0 ? 20 : 0;
+    s += I18N.get() !== 'es' ? (l === I18N.loc().toLowerCase() ? 50 : 20) : l === 'es-co' ? 50 : l === 'es-mx' ? 40 : l === 'es-us' ? 36 : l === 'es-419' ? 34 : l.indexOf('es-') === 0 ? 20 : 0;
     if (/natural|neural|online|google|sabina|dalia|paola|salome|helena|monica|laura|female|mujer/i.test(v.name)) s += 25;
     if (/male|jorge|pablo|raul|diego|juan/i.test(v.name) && !/female/i.test(v.name)) s -= 15;
     if (s > bs) { bs = s; best = v; }
@@ -29,19 +29,21 @@ function n2w(n) {
   return o.join(' ');
 }
 function speakable(t) {
+  if (I18N.get() !== 'es') return String(t).replace(/\$\s?([\d.]+)/g, function (m, d) { return d.replace(/\./g, '') + ' pesos'; }).replace(/×/g, ' x ').replace(/[•·→←]/g, ',').replace(/\s*\n+\s*/g, '. ').replace(/\s+/g, ' ').trim();
   return String(t).replace(/\$\s?([\d.]+)/g, function (m, d) { var n = parseInt(d.replace(/\./g, ''), 10); return isFinite(n) && n < 1e9 ? n2w(n) + ' pesos' : m; })
     .replace(/×/g, ' por ').replace(/[•·→←]/g, ',').replace(/\s*\n+\s*/g, '. ').replace(/\(8\)\s?/g, '').replace(/\s+/g, ' ').trim();
 }
 function stopSpeech() { VOICE.token++; try { if (hasTTS()) speechSynthesis.cancel(); } catch (e) { /* ok */ } avSet('talk', false); }
 function speak(text) {
   if (!canSpeak()) return Promise.resolve();
+  text = I18N.tr(text);
   var tok = ++VOICE.token, parts = speakable(text).match(/[^.!?¿]+[.!?]?/g) || [], v = pickVoice(), i = 0;
   try { speechSynthesis.cancel(); } catch (e) { /* ok */ }
   return new Promise(function (res) {
     function next() {
       if (tok !== VOICE.token || i >= parts.length) { if (tok === VOICE.token) avSet('talk', false); return res(); }
       var s = parts[i++].trim(); if (s.length < 2) return next();
-      var u = new SpeechSynthesisUtterance(s); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'es-CO';
+      var u = new SpeechSynthesisUtterance(s); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = I18N.loc();
       u.rate = 1.02; u.pitch = 1.08; u.volume = 1;
       var started = false, guard = setTimeout(function () { if (!started) { stopSpeech(); res(); } }, 2500);
       u.onstart = function () { started = true; clearTimeout(guard); avSet('talk', true); };
@@ -73,7 +75,7 @@ if ($('#micBtn')) {
   if (!SR) $('#micBtn').hidden = true;
   else $('#micBtn').addEventListener('click', function () {
     if (recog) { try { recog.stop(); } catch (e) { /* ok */ } return; }
-    stopSpeech(); recog = new SR(); recog.lang = 'es-CO'; recog.interimResults = false; recog.maxAlternatives = 1;
+    stopSpeech(); recog = new SR(); recog.lang = I18N.loc(); recog.interimResults = false; recog.maxAlternatives = 1;
     recog.onstart = function () { avSet('listen', true); $('#micBtn').setAttribute('aria-pressed', 'true'); };
     recog.onresult = function (e) { var t = e.results && e.results[0] && e.results[0][0] && e.results[0][0].transcript; if (t) sendChat(t); };
     recog.onerror = function (e) { toast(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? 'Este navegador no dio permiso al micrófono. Escribe tu mensaje.' : 'No pude escucharte. Intenta de nuevo o escribe.'); };

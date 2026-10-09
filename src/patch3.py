@@ -28,7 +28,7 @@ j = j[:a] + "/*V3CHAT*/\n" + j[b:]
 j = rep(j, "watch('kb', function (o) { S.kb = o; });", "watch('kb', function (o) { S.kb = o; }); watch('menus', function (o) { S.menus = o; }); startOrderWatchers();")
 j = rep(j, "function renderNav() {\n", "function renderNav() {\n  build();\n")
 v3 = rd('v3.js'); orders = rd('orders.js')
-j = rep(j, "/*V3CHAT*/", orders + "\n" + rd('voice.js') + "\n" + rd('preview.js') + "\n" + rd('forgot.js') + "\n" + v3)
+j = rep(j, "/*V3CHAT*/", rd('i18n.js') + "\n" + orders + "\n" + rd('voice.js') + "\n" + rd('preview.js') + "\n" + rd('forgot.js') + "\n" + v3)
 
 j = rep(j, "S.list = all.filter(function (r) { return !r.hidden; });", "var adm = !!(S.session && S.session.role === 'admin');\n  all.forEach(function (r) { if (r.demo && !adm) r.hidden = true; });\n  S.list = all.filter(function (r) { return !r.hidden; });")
 

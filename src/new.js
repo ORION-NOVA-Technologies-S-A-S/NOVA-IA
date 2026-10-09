@@ -13,7 +13,7 @@ function clip(s, n) { return String(s == null ? '' : s).slice(0, n); }
 function fmtPhone(p) { p = String(p || ''); return /^\d{7}$/.test(p) ? '(8) ' + p.slice(0, 3) + ' ' + p.slice(3) : p; }
 function safeUrl(u) { try { var x = new URL(String(u || '').trim()); return x.protocol === 'https:' ? x.href : ''; } catch (e) { return ''; } }
 function validLogo(s) { return typeof s === 'string' && s.length < 90000 && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+\/=]+$/.test(s); }
-function when(t) { try { return new Date(t).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }); } catch (e) { return ''; } }
+function when(t) { try { return new Date(t).toLocaleString(typeof I18N !== 'undefined' ? I18N.loc() : 'es-CO', { dateStyle: 'short', timeStyle: 'short' }); } catch (e) { return ''; } }
 function b64(buf) { var a = new Uint8Array(buf), s = ''; for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s); }
 function unb64(s) { var b = atob(s), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
 function rand4() { var a = new Uint8Array(3); crypto.getRandomValues(a); return Array.prototype.map.call(a, function (x) { return x.toString(36); }).join('').slice(0, 4); }
