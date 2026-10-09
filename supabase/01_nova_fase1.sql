@@ -34,9 +34,9 @@ create or replace function public.my_restaurant() returns text
 language sql stable security definer set search_path = public as
 $$ select data->>'r' from public.docs where path = 'registrations/' || auth.uid()::text $$;
 
-revoke all on function public.is_admin() from public;
-revoke all on function public.my_restaurant() from public;
-grant execute on function public.is_admin(), public.my_restaurant() to anon, authenticated;
+revoke all on function public.is_admin() from public, anon;
+revoke all on function public.my_restaurant() from public, anon;
+grant execute on function public.is_admin(), public.my_restaurant() to anon, authenticated;  -- anon la necesita para evaluar las reglas
 
 -- ---------------------------------------------------------------------
 -- Validación y normalización antes de guardar
@@ -139,6 +139,8 @@ create policy docs_update on public.docs for update to authenticated using (
 drop policy if exists docs_delete on public.docs;
 create policy docs_delete on public.docs for delete to authenticated using (public.is_admin());
 
+revoke all on public.docs from anon, authenticated;
+revoke all on public.admins from anon, authenticated;
 grant select on public.docs to anon;
 grant select, insert, update, delete on public.docs to authenticated;
 
@@ -158,5 +160,5 @@ begin
   if not found then raise exception 'el documento no existe'; end if;
 end $$;
 
-revoke all on function public.doc_set(text, jsonb), public.doc_merge(text, jsonb) from public;
+revoke all on function public.doc_set(text, jsonb), public.doc_merge(text, jsonb) from public, anon;
 grant execute on function public.doc_set(text, jsonb), public.doc_merge(text, jsonb) to authenticated;
