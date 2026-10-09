@@ -1,0 +1,53 @@
+{
+ "marks": [
+  {
+   "t": 1.907,
+   "text": "Esta es Nova: el asistente humanoide para restaurantes y hoteles de Neiva."
+  },
+  {
+   "t": 12.821,
+   "text": "Entras con tu cuenta. Es real: usuario y contraseña protegidos."
+  },
+  {
+   "t": 21.557,
+   "text": "Pides con NOVA FLOW IA, escribiendo como hablas."
+  },
+  {
+   "t": 36.904,
+   "text": "Nova muestra la carta del restaurante con sus precios."
+  },
+  {
+   "t": 41.571,
+   "text": "Confirmas tus datos y la dirección de entrega."
+  },
+  {
+   "t": 58.311,
+   "text": "Revisas el pedido: el valor total y el cobro de Nova."
+  },
+  {
+   "t": 61.311,
+   "text": "Pagas por PSE. En esta demostración el pago es simulado."
+  },
+  {
+   "t": 72.722,
+   "text": "Pedido tomado. El restaurante recibe el aviso con todo el detalle."
+  },
+  {
+   "t": 78.355,
+   "text": "El cliente sigue el estado de su pedido en Mis pedidos."
+  },
+  {
+   "t": 81.864,
+   "text": "Y el restaurante ve solo sus pedidos y los gestiona."
+  },
+  {
+   "t": 92.797,
+   "text": "La administración de Nova controla pedidos y liquidación: $200 por pedido."
+  },
+  {
+   "t": 98.822,
+   "text": "Nova: tecnología que atiende. Orion Nova Technologies."
+  }
+ ],
+ "dur": 102.824
+}
