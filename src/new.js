@@ -237,10 +237,16 @@ function renderView() {
 }
 function refresh() { build(); renderView(); renderNav(); renderChatHead(); }
 
+function navOn(it) {
+  if (it[2]) return false;
+  if (it[0] === 'hoteles') return S.view === 'dir' && S.dir.mode === 'hotel';
+  if (it[0] === 'dir') return S.view === 'dir' && S.dir.mode !== 'hotel';
+  return S.view === it[0];
+}
 function renderNav() {
   var slot = $('#authSlot'), mob = $('#mobnav');
   slot.textContent = '';
-  var items = [['home', 'Inicio', ''], ['dir', 'Restaurantes', ''], ['home', 'Seguridad', 'seguridad']];
+  var items = [['home', 'Inicio', ''], ['dir', 'Restaurantes', ''], ['hoteles', 'Hoteles', ''], ['home', 'Seguridad', 'seguridad']];
   if (S.session) {
     if (S.session.role === 'admin') items.push(['admin', 'Panel', '']);
     else if (S.reg && S.map[S.reg.r]) items.push(['rest', 'Mi restaurante', S.reg.r]);
@@ -254,13 +260,13 @@ function renderNav() {
   var nav = $('nav.main');
   items.forEach(function (it) {
     var b2 = el('button', 'navlink', it[1]); b2.type = 'button'; b2.setAttribute('data-go', it[0]); if (it[2]) b2.setAttribute('data-arg', it[2]);
-    if (S.view === it[0] && !it[2]) b2.setAttribute('aria-current', 'page');
+    if (navOn(it)) b2.setAttribute('aria-current', 'page');
     nav.insertBefore(b2, slot);
   });
   mob.textContent = '';
   items.forEach(function (it) {
     var m = el('button', '', it[1]); m.type = 'button'; m.setAttribute('data-go', it[0]); if (it[2]) m.setAttribute('data-arg', it[2]);
-    if (S.view === it[0] && !it[2]) m.setAttribute('aria-current', 'page');
+    if (navOn(it)) m.setAttribute('aria-current', 'page');
     mob.appendChild(m);
   });
   if (!S.session) { var mi = el('button', '', 'Ingresar'); mi.type = 'button'; mi.setAttribute('data-go', 'auth'); mi.setAttribute('data-tab', 'login'); mob.appendChild(mi); }
@@ -270,8 +276,11 @@ document.addEventListener('click', function (e) {
   var g = e.target.closest('[data-go]');
   if (g) {
     e.preventDefault();
+    var gv = g.getAttribute('data-go'), HT = T.indexOf('Hotel y hospedaje');
+    if (gv === 'hoteles') { S.dir.mode = 'hotel'; S.dir.type = HT; S.dir.q = ''; S.dir.n = 24; $('#dirQ').value = ''; gv = 'dir'; }
+    else if (gv === 'dir') { S.dir.mode = ''; if (S.dir.type === HT) S.dir.type = -1; }
     if (g.getAttribute('data-tab')) { S.authTab = g.getAttribute('data-tab'); if (S.authTab === 'reg' && !S.session) S.wizard = 1; }
-    go(g.getAttribute('data-go'), g.getAttribute('data-arg') || undefined);
+    go(gv, g.getAttribute('data-arg') || undefined);
     return;
   }
   var a = e.target.closest('[data-act]');
@@ -317,11 +326,15 @@ function typeChips(box, active, onPick, withAll) {
   T.forEach(function (t, i) { var n = tcount(i); if (n) add(t, i, n); });
 }
 function renderDir() {
-  $('#dirLede').textContent = S.list.length + ' restaurantes de Neiva en la base de datos de Nova. Elige un tipo o busca por nombre.';
-  typeChips($('#dirTypes'), S.dir.type, function (i) { S.dir.type = i; S.dir.n = 24; renderDir(); }, true);
+  var hot = S.dir.mode === 'hotel', HT = T.indexOf('Hotel y hospedaje');
+  $('#dirTitle').textContent = hot ? 'Hoteles de Neiva' : 'Restaurantes de Neiva';
+  $('#dirLede').textContent = hot ? tcount(HT) + ' hoteles y alojamientos de Neiva en la base de datos de Nova. Busca por nombre o dirección.' : S.list.length + ' restaurantes de Neiva en la base de datos de Nova. Elige un tipo o busca por nombre.';
+  $('#dirQ').setAttribute('placeholder', hot ? 'Buscar hotel por nombre o dirección' : 'Buscar por nombre o dirección');
+  $('#dirTypes').hidden = hot;
+  if (!hot) typeChips($('#dirTypes'), S.dir.type, function (i) { S.dir.type = i; S.dir.n = 24; renderDir(); }, true);
   var res = listBy(S.dir.type, S.dir.q), grid = $('#dirGrid'); grid.textContent = '';
   res.slice(0, S.dir.n).forEach(function (r) { grid.appendChild(cardEl(r, function (x) { go('rest', x.id); })); });
-  if (!res.length) grid.appendChild(el('div', 'empty', 'No hay restaurantes con esa búsqueda.'));
+  if (!res.length) grid.appendChild(el('div', 'empty', hot ? 'No hay hoteles con esa búsqueda.' : 'No hay restaurantes con esa búsqueda.'));
   $('#dirMore').hidden = res.length <= S.dir.n;
 }
 $('#dirQ').addEventListener('input', function () { S.dir.q = this.value; S.dir.n = 24; renderDir(); });
@@ -341,7 +354,7 @@ function renderRest() {
   if (S.reg && S.reg.r === r.id) tags.appendChild(el('span', 'tag ok', 'Tu restaurante'));
   if (r.hidden) tags.appendChild(el('span', 'tag warn', 'Oculto al público'));
   hd.appendChild(tags); head.appendChild(hd); card.appendChild(head);
-  card.appendChild(el('p', 'note', 'Este es el perfil de ' + r.n + ' dentro de Nova. No es el sitio oficial del restaurante.' + (r.logo ? '' : ' El logo es provisional hasta que administración suba el real.')));
+  card.appendChild(el('p', 'note', 'Este es el perfil de ' + r.n + (T[r.t] === 'Hotel y hospedaje' ? ' dentro de Nova. No es el sitio oficial del hotel.' : ' dentro de Nova. No es el sitio oficial del restaurante.') + (r.logo ? '' : ' El logo es provisional hasta que administración suba el real.')));
   var dl = el('dl', 'facts2');
   function row(k, v, copy) { var d = el('div'); d.appendChild(el('dt', '', k)); var dd = el('dd', '', v); if (copy) { var cb = el('button', '', 'Copiar'); cb.type = 'button'; cb.addEventListener('click', function () { copyText(copy); }); dd.appendChild(cb); } d.appendChild(dd); dl.appendChild(d); }
   row('Dirección', r.a || 'Sin dato. Pregúntale a Nova o al restaurante.');

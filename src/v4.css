@@ -40,3 +40,5 @@
   .langbar button { padding: 4px 6px; min-width: 26px; font-size: .66rem; }
   header.top nav.main { min-width: 0; flex: 0 1 auto; }
 }
+/* en celular el menú de abajo del encabezado debe verse (la regla de new.css lo ocultaba siempre) */
+@media (max-width: 760px) { header.top .wrap.mobnav { display: flex; } }
