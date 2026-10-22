@@ -1996,7 +1996,8 @@ function findRest(n) {
     var sig = toks.filter(function (x) { return !GENERIC[x]; });
     var use = sig.length ? sig : toks, hit = 0, len = 0;
     use.forEach(function (x) { if (n.indexOf(x) > -1) { hit++; len += x.length; } });
-    if (hit === use.length && len > bs && len >= 4) { bs = len; best = r; }
+    var whole = toks.every(function (x) { return n.indexOf(x) > -1; }); // nombres cortos ("Sam's Pizza") cuentan si se escribe el nombre completo
+    if (hit === use.length && len > bs && (len >= 4 || (whole && toks.length > 1))) { bs = len; best = r; }
   });
   return best;
 }
