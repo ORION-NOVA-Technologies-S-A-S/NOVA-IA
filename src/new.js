@@ -6,7 +6,7 @@
 var $ = function (s, r) { return (r || document).querySelector(s); };
 var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-function norm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function norm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[\u2018\u2019\u00b4`]/g, "'"); } // apóstrofo curvo = recto
 function slug(s) { return norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'r'; }
 function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 function clip(s, n) { return String(s == null ? '' : s).slice(0, n); }
@@ -306,7 +306,8 @@ function renderSecStatus() {
 function tcount(i) { var n = 0; S.list.forEach(function (r) { if (r.t === i) n++; }); return n; }
 function listBy(type, q) {
   var nq = norm((q || '').trim());
-  return S.list.filter(function (r) { return (type < 0 || r.t === type) && (!nq || r.k.indexOf(nq) > -1); });
+  var nq2 = nq.replace(/'/g, ''); // "sams pizza" también encuentra "Sam's Pizza"
+  return S.list.filter(function (r) { return (type < 0 || r.t === type) && (!nq || r.k.indexOf(nq) > -1 || r.k.replace(/'/g, '').indexOf(nq2) > -1); });
 }
 function cardEl(r, onPick, sel) {
   var b = el('button', 'rcard' + (sel ? ' sel' : '')); b.type = 'button';
