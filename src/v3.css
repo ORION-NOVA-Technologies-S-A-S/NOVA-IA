@@ -30,6 +30,12 @@
 .fab.nudge { animation: fabnudge 1.2s ease-in-out 3; }
 @keyframes fabnudge { 50% { transform: translateY(-6px); } }
 /* hero interactivo */
+.assist-stage { position: relative; width: 190px; padding: 64px 0 34px; cursor: pointer; outline-offset: 6px; justify-self: center; --ex: 0; --ey: 0; }
+.assist-stage .assist-av { width: 150px; height: 175px; margin: 0 auto; transition: transform .25s ease; }
+.assist-stage:hover .assist-av, .assist-stage:focus-visible .assist-av { transform: translateY(-4px) scale(1.03); }
+.assist-stage .assist-say { top: auto; bottom: calc(100% - 56px); width: 250px; max-width: 80vw; }
+.assist-hint { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: .74rem; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; pointer-events: none; }
+@media (max-width: 760px) { .assist-stage { width: 100%; max-width: 260px; margin-top: 70px; } .assist-stage .assist-av { width: 120px; height: 140px; } .assist-stage .assist-say { width: 230px; } }
 #heroStage { cursor: pointer; outline-offset: 6px; --ex: 0; --ey: 0; }
 .hero-eyes { transform: translate(calc(var(--ex) * 5px), calc(var(--ey) * 3px)); transition: transform .12s linear; }
 .hero-arm { transform-origin: 62px 160px; }

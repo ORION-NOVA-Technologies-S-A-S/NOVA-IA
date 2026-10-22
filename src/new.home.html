@@ -14,19 +14,11 @@
           <button class="btn ghost" type="button" data-go="dir">Ver restaurantes</button>
         </div>
       </div>
-      <svg class="mini" viewBox="0 0 120 150" role="img" aria-label="Nova, el asistente humanoide">
-        <defs>
-          <linearGradient id="mB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f2f5fc"/><stop offset="1" stop-color="#8d96b3"/></linearGradient>
-          <linearGradient id="mD" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1a2046"/><stop offset="1" stop-color="#05060f"/></linearGradient>
-        </defs>
-        <rect x="26" y="10" width="68" height="62" rx="28" fill="url(#mB)"/>
-        <rect x="33" y="19" width="54" height="42" rx="20" fill="url(#mD)"/>
-        <ellipse cx="48" cy="40" rx="8" ry="5.5" fill="#8fd0ff"/><ellipse cx="72" cy="40" rx="8" ry="5.5" fill="#8fd0ff"/>
-        <path d="M50 52q10 6 20 0" stroke="#5db0ff" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-        <rect x="52" y="72" width="16" height="12" rx="5" fill="url(#mD)"/>
-        <path d="M30 86 Q60 78 90 86 L86 138 Q60 146 34 138 Z" fill="url(#mB)"/>
-        <path d="M60 96 L64 110 L78 114 L64 118 L60 132 L56 118 L42 114 L56 110 Z" fill="#5db0ff"/>
-      </svg>
+      <div class="assist-stage" id="assistStage" role="button" tabindex="0" aria-label="Hablar con Nova">
+        <div class="hero-say assist-say" id="assistSay" hidden role="status"></div>
+        <div class="assist-av" data-av></div>
+        <div class="assist-hint" id="assistHint">Toca a Nova</div>
+      </div>
     </div>
   </section>
 

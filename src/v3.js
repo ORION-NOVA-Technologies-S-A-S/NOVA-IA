@@ -17,10 +17,11 @@ var AV = '<svg class="av" viewBox="0 0 120 140" aria-hidden="true"><circle class
   '<ellipse class="av-cheek" cx="37" cy="50" rx="4" ry="2.4" fill="#ff8fb0"/><ellipse class="av-cheek" cx="83" cy="50" rx="4" ry="2.4" fill="#ff8fb0"/>' +
   '<path class="av-smile" d="M52 49.5 q8 5.5 16 0" stroke="#8fd0ff" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
   '<ellipse class="av-open" cx="60" cy="51" rx="5.5" ry="3" fill="#8fd0ff"/></g></g></svg>';
+var AVT = {}; // un temporizador por gesto, para que un saludo no corte al siguiente
 function avSet(cls, on, ms) {
   $$('.av').forEach(function (a) { a.classList.toggle(cls, on); }); avLabel();
   var h = $('#heroStage'); if (h && cls === 'wave') h.classList.toggle('wave', on);
-  if (on && ms) setTimeout(function () { avSet(cls, false); }, ms);
+  clearTimeout(AVT[cls]); if (on && ms) AVT[cls] = setTimeout(function () { avSet(cls, false); }, ms);
 }
 function avPulse(cls, ms) { avSet(cls, false); setTimeout(function () { avSet(cls, true, ms); }, 20); }
 var ptrQ = 0;
@@ -50,6 +51,36 @@ if ($('#heroStage')) {
   $('#heroStage').addEventListener('click', function () { heroHi(true); });
   $('#heroStage').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); heroHi(true); } });
   setTimeout(function () { if (S.view === 'home') heroHi(false); }, 1800);
+}
+/* NOVA en la sección del asistente: saluda, cuenta qué sabe y abre el chat */
+var assistT, assistN = 0;
+function assistSay(t, voice) {
+  var s = $('#assistSay'); if (!s) return; s.textContent = I18N.tr(t); s.hidden = false;
+  clearTimeout(assistT); assistT = setTimeout(function () { s.hidden = true; }, 5200);
+  if (voice) speak(t);
+}
+function assistMenus() {
+  return Object.keys(S.menus || {}).map(function (id) { return S.map[id]; }).filter(function (r) { return r && !r.demo && !isHotel(r) && hasMenu(r); }).map(function (r) { return r.n; });
+}
+function assistTap() {
+  var st = assistN++ % 3, hint = $('#assistHint');
+  if (st === 0) { avPulse('wave', 2600); avPulse('happy', 1400); assistSay('¡Hola! Soy Nova. Te ayudo a encontrar restaurantes en Neiva y a pedir.', true); }
+  else if (st === 1) {
+    var ns = assistMenus(); avPulse('happy', 1400);
+    assistSay(ns.length ? 'Ya tengo la carta de ' + ns.slice(0, 3).join(', ').replace(/, ([^,]*)$/, ' y $1') + '. Toca otra vez y pedimos.' : 'Te doy la dirección y el teléfono de cada local. Toca otra vez y pregúntame.', true);
+  } else { avPulse('wave', 1500); assistSay('¡Vamos! Abro el chat.', true); setTimeout(function () { openChatWith(null, null); }, 900); }
+  if (hint) hint.textContent = I18N.tr(st === 2 ? 'Toca a Nova' : 'Toca otra vez');
+}
+if ($('#assistStage')) {
+  $('#assistStage').addEventListener('click', assistTap);
+  $('#assistStage').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); assistTap(); } });
+  // la primera vez que aparece en pantalla saluda con la mano
+  if ('IntersectionObserver' in window) {
+    var assistSeen = new IntersectionObserver(function (es) {
+      if (es.some(function (x) { return x.isIntersecting; })) { assistSeen.disconnect(); avPulse('wave', 2400); assistSay('¡Hola! Tócame y hablamos.', false); }
+    }, { threshold: .6 });
+    assistSeen.observe($('#assistStage'));
+  }
 }
 setTimeout(function () { var f = $('#fab'); if (f && !S.chat.open) f.classList.add('nudge'); }, 4000);
 
