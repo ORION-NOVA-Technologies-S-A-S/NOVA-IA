@@ -236,7 +236,9 @@ function cartLines(f) {
 function cartTotal(f) { return cartLines(f).reduce(function (s, l) { return s + l.q * l.p; }, 0); }
 async function startFood(r, hint) {
   var f = S.flow, m = menuOf(f.r);
-  var pre = parseOrderText(norm(hint || ''), m), pk = Object.keys(pre);
+  var hn = ' ' + norm(hint || '') + ' ';
+  sigToks(r.n).forEach(function (t) { hn = hn.split(t).join(' '); }); // el nombre del negocio no cuenta como producto
+  var pre = parseOrderText(hn, m), pk = Object.keys(pre);
   Object.keys(pre).forEach(function (k) { f.cart[k] = pre[k]; });
   await novaSay('Esta es la carta de ' + r.n + '. ' + (pk.length ? 'Ya marqué lo que me pediste; ajusta las cantidades si quieres. ' : 'Elige lo que quieres con los botones + y −. ') + (menuDoc(r.id) && BASE_MENUS[r.id] && !S.menus[r.id] ? 'Son precios de ejemplo del negocio de prueba.' : ''), null, 'happy');
   showMenuCard();
@@ -412,15 +414,18 @@ async function placeOrder(f, total, fee, bank) {
 }
 async function confirmCard(o) {
   var hotel = o.k === 'hotel';
-  await novaSay('¡' + (hotel ? 'Reserva tomada' : 'Pedido tomado') + '! Pagaste ' + cop(o.total) + ' (simulación). Ya le avisé a ' + o.rn + ' con el detalle y los valores. Ellos ' + (hotel ? 'confirman tu reserva' : 'lo preparan y te lo envían') + '. Puedes seguir el estado en Mis pedidos.', null, 'happy');
+  var rr = S.map[o.rid], cel = rr && rr.p ? String(rr.p).replace(/\D/g, '') : '';
+  var wa = /^3\d{9}$/.test(cel) ? '57' + cel : '';
+  await novaSay('¡' + (hotel ? 'Reserva registrada' : 'Pedido registrado') + '! Quedó guardado en NOVA por ' + cop(o.total) + '. El pago fue de prueba: no se cobró nada. ' + (wa ? 'Para que ' + o.rn + ' lo reciba, envíaselo por WhatsApp con el botón de abajo.' : 'Para que ' + o.rn + ' lo reciba, envíale el texto de abajo.') + ' Lo verás en Mis pedidos.', null, 'happy');
   var c = mcard('Número ' + o.id.slice(-6).toUpperCase()), body = mailText(o);
   c.appendChild(el('p', 'fine', 'Correo para el dueño de ' + o.rn + (emailOk(o.email) ? ' (' + o.email + ')' : ': el negocio aún no tiene correo cargado. Copia el texto y envíalo, o pídele a administración que lo registre.'))); c.appendChild(el('div', 'mmail', body));
   var bar = el('div', 'opts');
+  if (wa) { var w = el('a', 'go', 'Enviar por WhatsApp'); w.href = 'https://wa.me/' + wa + '?text=' + encodeURIComponent(body); w.target = '_blank'; w.rel = 'noopener'; bar.appendChild(w); }
   if (emailOk(o.email)) { var a = el('a', 'go', 'Abrir correo'); a.href = 'mailto:' + o.email + '?subject=' + encodeURIComponent('Nuevo ' + (hotel ? 'reserva' : 'pedido') + ' Nova ' + o.id.slice(-6).toUpperCase()) + '&body=' + encodeURIComponent(body); bar.appendChild(a); }
   var cp = el('button', 'alt', 'Copiar texto'); cp.type = 'button'; cp.addEventListener('click', function () { copyText(body); }); bar.appendChild(cp);
   var mo = el('button', 'alt', 'Ver mis pedidos'); mo.type = 'button'; mo.addEventListener('click', function () { toggleChat(false); go('orders'); }); bar.appendChild(mo);
   c.appendChild(bar);
-  c.appendChild(el('p', 'fine', 'Nova no envía correos por sí sola desde esta página: el aviso al negocio llega a su panel de Pedidos y el correo se abre listo para enviar.'));
+  c.appendChild(el('p', 'fine', 'NOVA no envía mensajes por sí sola: el negocio recibe el pedido cuando tú se lo envías, o en su panel de Pedidos si tiene cuenta en NOVA.'));
 }
 
 /* ============ conversación ============ */
